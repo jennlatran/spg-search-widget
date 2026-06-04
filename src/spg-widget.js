@@ -1,0 +1,905 @@
+/**
+ * SPG Widget — unified embeddable Service Pricing Guide widget
+ *
+ * Three presentation modes from one file:
+ *
+ *   inline  – renders directly into a container div
+ *   popover – floats below/above a trigger element (search input, button, etc.)
+ *   modal   – full centered dialog with two-panel pricing layout
+ *
+ * ── Attach to an existing search input (most common integration) ──
+ *
+ *   SPGWidget.attach('#service-search', {
+ *     vehicleContext: { year: 2022, make: 'Toyota', model: 'Camry' },
+ *     onConfirm: (operations) => console.log(operations),
+ *   });
+ *
+ * ── Inline (tight space) ──
+ *
+ *   SPGWidget.init({
+ *     mode: 'inline',
+ *     container: '#my-div',
+ *     onConfirm: (ops) => {},
+ *   });
+ *
+ * ── Modal triggered by a button ──
+ *
+ *   SPGWidget.init({
+ *     mode: 'modal',
+ *     trigger: '#open-spg-btn',
+ *     onConfirm: (ops) => {},
+ *   });
+ *
+ * Events: trigger element (or container) dispatches 'spg:confirm' with detail.operations
+ *
+ * Returns: widget instance with .open(), .close(), .getValue(), .destroy() methods
+ */
+(function (global) {
+  'use strict';
+
+  // ─── Mock Data ────────────────────────────────────────────────────────────────
+
+  const LABOR_TYPES = [
+    { id: 'standard', name: 'Standard',  rate: 95  },
+    { id: 'premium',  name: 'Premium',   rate: 125 },
+    { id: 'express',  name: 'Express',   rate: 145 },
+  ];
+
+  const CATEGORIES = [
+    {
+      id: 'oil-fluids', name: 'Oil & Fluids',
+      operations: [
+        { id: 'op-oil-conv',  name: 'Oil Change – Conventional',      opcode: 'OC-CONV',     laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p1', name:'Oil Filter',                price: 8.99, qty:1 }, { id:'p2', name:'Conv. Oil 5W-30 (5qt)', price:24.99, qty:1 }], isDefault: false },
+        { id: 'op-oil-synth', name: 'Oil Change – Full Synthetic',     opcode: 'OC-SYNTH',    laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p3', name:'Oil Filter',                price:12.99, qty:1 }, { id:'p4', name:'Full Syn. Oil 5W-30 (5qt)', price:49.99, qty:1 }], isDefault: false },
+        { id: 'op-coolant',   name: 'Coolant System Flush',            opcode: 'COOL-FLUSH',  laborHours: 1.0, laborTypeId: 'standard', parts: [{ id:'p5', name:'Coolant (1 gal)',            price:22.99, qty:2 }], isDefault: false },
+        { id: 'op-trans',     name: 'Transmission Fluid Service',      opcode: 'TRANS-FLUID', laborHours: 1.5, laborTypeId: 'premium',  parts: [{ id:'p6', name:'ATF Fluid (1qt)',            price:18.99, qty:4 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'brakes', name: 'Brakes',
+      operations: [
+        { id: 'op-brk-f',     name: 'Brake Pad Replacement – Front',  opcode: 'BRK-PAD-F',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p7',  name:'Front Brake Pad Set',       price:64.99, qty:1 }], isDefault: false },
+        { id: 'op-brk-r',     name: 'Brake Pad Replacement – Rear',   opcode: 'BRK-PAD-R',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p8',  name:'Rear Brake Pad Set',        price:54.99, qty:1 }], isDefault: false },
+        { id: 'op-rotor',     name: 'Brake Rotor Replacement – Front', opcode: 'BRK-ROTOR-F', laborHours: 2.0, laborTypeId: 'standard', parts: [{ id:'p9',  name:'Front Rotor (ea)',          price:79.99, qty:2 }], isDefault: false },
+        { id: 'op-brk-flush', name: 'Brake Fluid Flush',              opcode: 'BRK-FLUSH',   laborHours: 0.8, laborTypeId: 'standard', parts: [{ id:'p10', name:'DOT 3 Brake Fluid',         price:14.99, qty:1 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'tires', name: 'Tires & Wheels',
+      operations: [
+        { id: 'op-tire-rot',  name: 'Tire Rotation',                  opcode: 'TIRE-ROT',    laborHours: 0.5, laborTypeId: 'standard', parts: [], isDefault: true  },
+        { id: 'op-whl-bal',   name: 'Wheel Balance (4 wheels)',        opcode: 'WHEEL-BAL',   laborHours: 1.0, laborTypeId: 'standard', parts: [], isDefault: false },
+        { id: 'op-tire-inst', name: 'Tire Installation (per tire)',    opcode: 'TIRE-INST',   laborHours: 0.3, laborTypeId: 'standard', parts: [{ id:'p11', name:'Valve Stem',               price: 3.99, qty:1 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'engine', name: 'Engine & Performance',
+      operations: [
+        { id: 'op-spark',   name: 'Spark Plug Replacement',           opcode: 'ENG-SPARK',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p12', name:'Iridium Spark Plug',        price:14.99, qty:4 }], isDefault: false },
+        { id: 'op-air-flt', name: 'Engine Air Filter Replacement',    opcode: 'ENG-AIR',     laborHours: 0.3, laborTypeId: 'standard', parts: [{ id:'p13', name:'Engine Air Filter',         price:24.99, qty:1 }], isDefault: false },
+        { id: 'op-fuel',    name: 'Fuel System Cleaning',             opcode: 'ENG-FUEL',    laborHours: 1.0, laborTypeId: 'premium',  parts: [{ id:'p14', name:'Fuel System Cleaner',      price:34.99, qty:1 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'electrical', name: 'Electrical',
+      operations: [
+        { id: 'op-batt', name: 'Battery Replacement',                 opcode: 'ELEC-BATT',   laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p15', name:'Group 35 Battery',         price:139.99, qty:1 }], isDefault: false },
+        { id: 'op-alt',  name: 'Alternator Replacement',              opcode: 'ELEC-ALT',    laborHours: 2.5, laborTypeId: 'premium',  parts: [{ id:'p16', name:'Reman. Alternator',         price:229.99, qty:1 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'hvac', name: 'HVAC',
+      operations: [
+        { id: 'op-ac',      name: 'A/C System Recharge',              opcode: 'HVAC-AC',     laborHours: 1.0, laborTypeId: 'standard', parts: [{ id:'p17', name:'R-134a Refrigerant',       price:49.99, qty:1 }], isDefault: false },
+        { id: 'op-cab-flt', name: 'Cabin Air Filter Replacement',     opcode: 'HVAC-CAB',    laborHours: 0.3, laborTypeId: 'standard', parts: [{ id:'p18', name:'Cabin Air Filter',         price:19.99, qty:1 }], isDefault: true  },
+      ],
+    },
+  ];
+
+  // ─── Utilities ────────────────────────────────────────────────────────────────
+
+  const r2   = n => Math.round(n * 100) / 100;
+  const fmt$ = n => '$' + Number(n).toFixed(2);
+  const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  function resolve(ref) {
+    if (!ref) return null;
+    return typeof ref === 'string' ? document.querySelector(ref) : ref;
+  }
+
+  function getOp(id) {
+    for (const cat of CATEGORIES) {
+      const op = cat.operations.find(o => o.id === id);
+      if (op) return op;
+    }
+    return null;
+  }
+
+  function calcPricing(op, ov) {
+    ov = ov || {};
+    const ltId      = ov.laborTypeId || op.laborTypeId;
+    const lt        = LABOR_TYPES.find(l => l.id === ltId) || LABOR_TYPES[0];
+    const laborHours = ov.laborHours !== undefined ? ov.laborHours : op.laborHours;
+    const laborRate  = ov.laborRate  !== undefined ? ov.laborRate  : lt.rate;
+    const laborCost  = r2(laborHours * laborRate);
+    const partsCost  = r2(op.parts.reduce((s, p) => s + p.price * p.qty, 0));
+    return { ltId, laborHours, laborRate, laborCost, partsCost, parts: op.parts, total: r2(laborCost + partsCost) };
+  }
+
+  // ─── Styles ───────────────────────────────────────────────────────────────────
+
+  const STYLES = `
+/* ── Reset ── */
+.spgw-root *{box-sizing:border-box;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;margin:0;padding:0}
+
+/* ── Inline: wraps the compact widget body ── */
+.spgw-inline{display:flex;flex-direction:column;height:100%;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+
+/* ── Popover: fixed, floats near trigger ── */
+.spgw-popover{
+  position:fixed;z-index:9800;
+  background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+  box-shadow:0 8px 30px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;transform:translateY(-6px);
+  transition:opacity .15s,transform .15s;
+  min-width:340px;max-width:480px;
+}
+.spgw-popover.spgw--visible{opacity:1;pointer-events:all;transform:translateY(0)}
+
+/* ── Modal overlay ── */
+.spgw-modal-overlay{
+  position:fixed;inset:0;z-index:9900;
+  background:rgba(15,23,42,.55);backdrop-filter:blur(2px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.spgw-modal-overlay.spgw--visible{opacity:1;pointer-events:all}
+.spgw-modal-dialog{
+  background:#fff;border-radius:12px;
+  box-shadow:0 24px 64px rgba(0,0,0,.25);
+  width:100%;max-width:760px;
+  display:flex;flex-direction:column;
+  max-height:calc(100vh - 40px);
+  transform:scale(.97) translateY(8px);
+  transition:transform .2s;
+  overflow:hidden;
+}
+.spgw-modal-overlay.spgw--visible .spgw-modal-dialog{transform:scale(1) translateY(0)}
+
+/* ── Compact widget header (popover only) ── */
+.spgw-pop-hdr{
+  padding:10px 12px 8px;border-bottom:1px solid #f1f5f9;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.spgw-pop-title{font-size:13px;font-weight:700;color:#1e293b}
+.spgw-pop-veh{font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:10px}
+.spgw-pop-close{background:none;border:none;cursor:pointer;color:#94a3b8;font-size:18px;line-height:1;padding:2px 4px;border-radius:4px}
+.spgw-pop-close:hover{color:#374151;background:#f1f5f9}
+
+/* ── Modal dialog header ── */
+.spgw-modal-hdr{
+  padding:14px 18px;background:#1e3a8a;color:#fff;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.spgw-modal-title{font-size:15px;font-weight:700}
+.spgw-modal-veh{font-size:12px;background:rgba(255,255,255,.18);padding:3px 10px;border-radius:20px;opacity:.95}
+.spgw-modal-close{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.7);font-size:20px;line-height:1;padding:2px 6px;border-radius:4px}
+.spgw-modal-close:hover{color:#fff;background:rgba(255,255,255,.15)}
+
+/* ── Modal two-panel body ── */
+.spgw-modal-body{display:flex;flex:1;overflow:hidden}
+.spgw-modal-left{width:300px;min-width:260px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid #e2e8f0}
+.spgw-modal-right{flex:1;overflow-y:auto;background:#fafafa}
+
+/* ── Search ── */
+.spgw-search-wrap{padding:8px;flex-shrink:0;border-bottom:1px solid #f1f5f9}
+.spgw-search{
+  width:100%;padding:7px 10px 7px 30px;border:1px solid #e2e8f0;border-radius:6px;
+  font-size:13px;outline:none;color:#111827;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 9px center;
+}
+.spgw-search:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.12)}
+
+/* ── Tree ── */
+.spgw-tree{flex:1;overflow-y:auto}
+.spgw-cat{border-bottom:1px solid #f1f5f9}
+.spgw-cat-hdr{display:flex;align-items:center;gap:5px;padding:8px 10px;cursor:pointer;user-select:none;transition:background .12s}
+.spgw-cat-hdr:hover{background:#f8fafc}
+.spgw-caret{font-size:9px;color:#94a3b8;width:12px;flex-shrink:0;transition:transform .15s;display:inline-block}
+.spgw-caret.open{transform:rotate(90deg)}
+.spgw-cat-name{font-size:13px;font-weight:600;color:#1e293b;flex:1}
+.spgw-cat-badge{font-size:11px;padding:1px 6px;border-radius:8px;background:#f1f5f9;color:#64748b}
+.spgw-cat-badge.match{background:#dbeafe;color:#1d4ed8}
+
+/* ── Operation row ── */
+.spgw-op{border-bottom:1px solid #f8fafc}
+.spgw-op-row{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 10px 7px 22px;cursor:pointer;transition:background .1s;
+}
+.spgw-op-row:hover,.spgw-op.is-focused .spgw-op-row{background:#f0f9ff}
+.spgw-op.is-focused .spgw-op-row{border-left:3px solid #3b82f6;padding-left:19px}
+.spgw-op.is-selected .spgw-op-name{color:#1d4ed8;font-weight:500}
+.spgw-chk{flex-shrink:0;accent-color:#2563eb;width:14px;height:14px;cursor:pointer}
+.spgw-op-info{flex:1;min-width:0}
+.spgw-op-name{display:block;font-size:13px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spgw-op-code{display:block;font-size:11px;color:#94a3b8;font-family:monospace}
+.spgw-op-price{font-size:12px;font-weight:600;color:#059669;flex-shrink:0}
+.spgw-op-toggle{
+  background:none;border:1px solid #e2e8f0;cursor:pointer;
+  color:#94a3b8;font-size:9px;width:20px;height:20px;
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .12s;
+}
+.spgw-op-toggle:hover,.spgw-op.is-expanded .spgw-op-toggle{background:#f1f5f9;color:#374151;border-color:#cbd5e1}
+
+/* ── Compact inline pricing detail ── */
+.spgw-op-detail{
+  padding:0 10px 10px 22px;
+  border-top:1px solid #f1f5f9;background:#f8fafc;
+}
+.spgw-cprc{padding:10px;background:#fff;border-radius:7px;border:1px solid #e2e8f0}
+.spgw-cprc-labor{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.spgw-cprc-sel{font-size:12px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:5px;outline:none;background:#fff;color:#374151;flex-shrink:0}
+.spgw-cprc-sel:focus{border-color:#3b82f6}
+.spgw-cprc-inp{font-size:12px;padding:4px 5px;border:1px solid #e2e8f0;border-radius:5px;outline:none;background:#fff;color:#374151;width:56px;text-align:right}
+.spgw-cprc-inp:focus{border-color:#3b82f6}
+.spgw-cprc-lbl{font-size:12px;color:#6b7280;white-space:nowrap}
+.spgw-cprc-parts{display:flex;flex-direction:column;gap:3px;margin-bottom:7px;padding-top:6px;border-top:1px solid #f1f5f9}
+.spgw-cprc-part{display:flex;justify-content:space-between;font-size:12px;color:#374151}
+.spgw-cprc-part span:last-child{color:#059669;font-weight:500}
+.spgw-cprc-total{display:flex;gap:12px;justify-content:flex-end;font-size:12px;padding-top:6px;border-top:1px solid #f1f5f9}
+.spgw-cprc-total span{color:#6b7280}
+.spgw-cprc-total strong{color:#059669;font-size:13px}
+
+/* ── Modal right panel pricing ── */
+.spgw-rp{padding:18px}
+.spgw-rp-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#94a3b8;padding:32px;text-align:center}
+.spgw-rp-empty-icon{font-size:40px}
+.spgw-rp-empty p{font-size:13px;line-height:1.5}
+.spgw-rp-hdr{padding-bottom:14px;border-bottom:1px solid #e2e8f0;margin-bottom:14px}
+.spgw-rp-name{font-size:16px;font-weight:700;color:#111827;margin-bottom:5px}
+.spgw-rp-tag{font-size:11px;color:#6b7280;font-family:monospace;background:#f3f4f6;padding:2px 7px;border-radius:4px}
+.spgw-rp-section{background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:12px;margin-bottom:10px}
+.spgw-rp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:10px}
+.spgw-rp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.spgw-rp-row:last-child{margin-bottom:0}
+.spgw-rp-lbl{font-size:13px;color:#6b7280;flex-shrink:0}
+.spgw-rp-sel,.spgw-rp-inp{font-size:13px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:5px;outline:none;background:#fff;color:#111827}
+.spgw-rp-sel:focus,.spgw-rp-inp:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.1)}
+.spgw-rp-inp{width:100px;text-align:right}
+.spgw-rp-subtotal{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#374151;padding-top:8px;margin-top:8px;border-top:1px solid #f1f5f9}
+.spgw-rp-part{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #f8fafc;color:#374151}
+.spgw-rp-no-parts{font-size:13px;color:#94a3b8;font-style:italic;margin-bottom:4px}
+.spgw-rp-total{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:2px solid #e2e8f0;margin-bottom:12px}
+.spgw-rp-total-lbl{font-size:14px;font-weight:700;color:#111827}
+.spgw-rp-total-val{font-size:20px;font-weight:800;color:#059669}
+.spgw-rp-add-btn{display:block;width:100%;padding:9px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:background .12s}
+.spgw-rp-add-btn:hover{background:#1d4ed8}
+.spgw-rp-add-btn.is-selected{background:#fee2e2;color:#dc2626}
+.spgw-rp-add-btn.is-selected:hover{background:#fecaca}
+
+/* ── Empty tree state ── */
+.spgw-tree-empty{padding:20px;text-align:center;font-size:13px;color:#94a3b8}
+
+/* ── Footer ── */
+.spgw-footer{
+  padding:8px 10px;border-top:1px solid #e2e8f0;background:#f8fafc;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  flex-shrink:0;flex-wrap:wrap;min-height:48px;
+}
+.spgw-footer-left{display:flex;align-items:center;gap:6px;flex:1;min-width:0;flex-wrap:wrap}
+.spgw-no-sel{font-size:12px;color:#94a3b8;font-style:italic}
+.spgw-chip{
+  display:flex;align-items:center;gap:4px;
+  background:#dbeafe;border:1px solid #93c5fd;border-radius:12px;
+  padding:3px 6px 3px 9px;font-size:11px;
+}
+.spgw-chip-name{color:#1e40af;font-weight:500;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spgw-chip-rm{background:none;border:none;cursor:pointer;color:#93c5fd;font-size:14px;line-height:1;padding:0 1px;transition:color .1s}
+.spgw-chip-rm:hover{color:#dc2626}
+.spgw-footer-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.spgw-total{font-size:14px;font-weight:700;color:#059669}
+.spgw-confirm-btn{
+  padding:7px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s;
+}
+.spgw-confirm-btn:hover:not(:disabled){background:#1d4ed8}
+.spgw-confirm-btn:disabled{opacity:.4;cursor:not-allowed}
+`;
+
+  // ─── Widget ───────────────────────────────────────────────────────────────────
+
+  class SPGWidgetCore {
+    constructor(config) {
+      this._c = {
+        mode:           config.mode || (config.trigger ? 'popover' : 'inline'),
+        container:      resolve(config.container),
+        trigger:        resolve(config.trigger),
+        vehicleContext: config.vehicleContext || {},
+        multiSelect:    config.multiSelect !== false,
+        onConfirm:      config.onConfirm  || null,
+        onChange:       config.onChange   || null,
+      };
+      this._s = {
+        search:       '',
+        expandedCats: new Set(),
+        expandedOp:   null,  // compact: which op is priced inline
+        focusedOp:    null,  // modal: which op shows in right panel
+        selectedOps:  [],    // [{ op, pricing }]
+        overrides:    {},    // { [opId]: { laborTypeId?, laborHours?, laborRate? } }
+      };
+      this._root     = null;
+      this._isOpen   = false;
+      this._onOutside = null;
+      this._onKey     = null;
+      this._onScroll  = null;
+    }
+
+    // ── Public API ─────────────────────────────────────────────────────────────
+
+    init() {
+      _injectStyles();
+      const mode = this._c.mode;
+      if (mode === 'inline') {
+        this._root = this._buildCompact();
+        this._root.classList.add('spgw-root', 'spgw-inline');
+        this._c.container.appendChild(this._root);
+        this._bindEvents();
+        this._updateTree();
+      } else if (mode === 'popover') {
+        this._root = this._buildCompact();
+        this._root.classList.add('spgw-root', 'spgw-popover');
+        document.body.appendChild(this._root);
+        this._bindEvents();
+        this._bindTrigger();
+      } else {
+        this._root = this._buildModal();
+        this._root.classList.add('spgw-root');
+        document.body.appendChild(this._root);
+        this._bindEvents();
+        if (this._c.trigger) this._bindTrigger();
+      }
+      return this;
+    }
+
+    open() {
+      if (this._isOpen) return;
+      this._isOpen = true;
+      if (this._c.mode === 'popover') this._positionPopover();
+      this._root.classList.add('spgw--visible');
+      if (this._c.mode === 'modal') document.body.style.overflow = 'hidden';
+      this._updateTree();
+
+      // Close on outside click (popover + modal)
+      if (this._c.mode !== 'inline') {
+        setTimeout(() => {
+          this._onOutside = e => {
+            if (!this._root.contains(e.target) && e.target !== this._c.trigger) this.close();
+          };
+          this._onKey = e => { if (e.key === 'Escape') this.close(); };
+          document.addEventListener('mousedown', this._onOutside);
+          document.addEventListener('keydown',   this._onKey);
+        }, 0);
+
+        // Reposition popover on scroll
+        if (this._c.mode === 'popover') {
+          this._onScroll = () => this._isOpen && this._positionPopover();
+          window.addEventListener('scroll', this._onScroll, true);
+        }
+      }
+    }
+
+    close() {
+      if (!this._isOpen) return;
+      this._isOpen = false;
+      this._root.classList.remove('spgw--visible');
+      if (this._c.mode === 'modal') document.body.style.overflow = '';
+      if (this._onOutside) { document.removeEventListener('mousedown', this._onOutside); this._onOutside = null; }
+      if (this._onKey)     { document.removeEventListener('keydown',   this._onKey);     this._onKey     = null; }
+      if (this._onScroll)  { window.removeEventListener('scroll',      this._onScroll, true); this._onScroll = null; }
+    }
+
+    getValue() { return this._buildPayload(); }
+
+    destroy() {
+      this.close();
+      if (this._root && this._root.parentNode) this._root.parentNode.removeChild(this._root);
+    }
+
+    // ── Build ──────────────────────────────────────────────────────────────────
+
+    _buildCompact() {
+      const v = this._c.vehicleContext;
+      const vLabel = [v.year, v.make, v.model, v.trim, v.engine].filter(Boolean).join(' ');
+      const el = document.createElement('div');
+      el.innerHTML = `
+        ${this._c.mode === 'popover' ? `
+          <div class="spgw-pop-hdr">
+            <span class="spgw-pop-title">Service Operations</span>
+            ${vLabel ? `<span class="spgw-pop-veh">${esc(vLabel)}</span>` : ''}
+            <button class="spgw-pop-close" data-action="close">✕</button>
+          </div>` : ''}
+        <div class="spgw-search-wrap">
+          <input class="spgw-search" type="text" placeholder="Search by name, category, or opcode…" autocomplete="off" />
+        </div>
+        <div class="spgw-tree"></div>
+        ${this._footerHTML()}`;
+      return el;
+    }
+
+    _buildModal() {
+      const v = this._c.vehicleContext;
+      const vLabel = [v.year, v.make, v.model, v.trim, v.engine].filter(Boolean).join(' ');
+      const el = document.createElement('div');
+      el.className = 'spgw-modal-overlay';
+      el.innerHTML = `
+        <div class="spgw-modal-dialog">
+          <div class="spgw-modal-hdr">
+            <span class="spgw-modal-title">Service Operations</span>
+            ${vLabel ? `<span class="spgw-modal-veh">${esc(vLabel)}</span>` : ''}
+            <button class="spgw-modal-close" data-action="close">✕</button>
+          </div>
+          <div class="spgw-modal-body">
+            <div class="spgw-modal-left">
+              <div class="spgw-search-wrap">
+                <input class="spgw-search" type="text" placeholder="Search operations…" autocomplete="off" />
+              </div>
+              <div class="spgw-tree"></div>
+            </div>
+            <div class="spgw-modal-right">${this._rightPanelHTML(null)}</div>
+          </div>
+          ${this._footerHTML()}
+        </div>`;
+      return el;
+    }
+
+    _footerHTML() {
+      return `<div class="spgw-footer">
+        <div class="spgw-footer-left"><span class="spgw-no-sel">No services selected</span></div>
+        <div class="spgw-footer-right">
+          <button class="spgw-confirm-btn" disabled>Confirm →</button>
+        </div>
+      </div>`;
+    }
+
+    // ── Events ─────────────────────────────────────────────────────────────────
+
+    _bindTrigger() {
+      const trigger = this._c.trigger;
+      const open = () => { if (!this._isOpen) this.open(); };
+      trigger.addEventListener('focus', open);
+      trigger.addEventListener('click', open);
+    }
+
+    _bindEvents() {
+      const root = this._root;
+
+      // Close button (popover header + modal header)
+      root.addEventListener('click', e => {
+        if (e.target.closest('[data-action="close"]')) { this.close(); return; }
+      });
+
+      // Backdrop click (modal)
+      if (this._c.mode === 'modal') {
+        root.addEventListener('mousedown', e => {
+          if (e.target === root) this.close();
+        });
+      }
+
+      // Search
+      root.querySelector('.spgw-search').addEventListener('input', e => {
+        this._s.search = e.target.value;
+        this._updateTree();
+      });
+
+      // Tree: category toggle, op row click, checkbox
+      root.querySelector('.spgw-tree').addEventListener('click', e => {
+        // Category header
+        const catHdr = e.target.closest('.spgw-cat-hdr');
+        if (catHdr && !this._s.search.trim()) {
+          const id = catHdr.dataset.cat;
+          this._s.expandedCats[this._s.expandedCats.has(id) ? 'delete' : 'add'](id);
+          this._updateTree();
+          return;
+        }
+
+        // Expand toggle (compact mode)
+        const toggleBtn = e.target.closest('.spgw-op-toggle');
+        if (toggleBtn) {
+          const opId = toggleBtn.dataset.opToggle;
+          this._s.expandedOp = this._s.expandedOp === opId ? null : opId;
+          this._updateTree();
+          return;
+        }
+
+        // Operation row click (not checkbox, not toggle)
+        const opRow = e.target.closest('.spgw-op-row');
+        if (opRow && !e.target.classList.contains('spgw-chk') && !e.target.closest('.spgw-op-toggle')) {
+          const opId = opRow.dataset.opRow;
+          const op = getOp(opId);
+          if (!op) return;
+
+          if (this._c.mode === 'modal') {
+            // Modal: focus shows pricing panel, separate from selection
+            this._s.focusedOp = op;
+            this._updateRightPanel(op);
+            this._updateTree();
+          } else {
+            // Compact: click row = expand pricing inline
+            this._s.expandedOp = this._s.expandedOp === opId ? null : opId;
+            this._updateTree();
+          }
+        }
+      });
+
+      // Checkbox toggle
+      root.querySelector('.spgw-tree').addEventListener('change', e => {
+        if (!e.target.classList.contains('spgw-chk')) return;
+        const op = getOp(e.target.dataset.op);
+        if (!op) return;
+        e.target.checked ? this._selectOp(op) : this._deselectOp(op.id);
+      });
+
+      // Compact pricing inputs (delegated from tree)
+      root.querySelector('.spgw-tree').addEventListener('change', e => {
+        const { op: opId, field } = e.target.dataset;
+        if (opId && field) this._applyOverride(opId, field, e.target.value);
+      });
+      root.querySelector('.spgw-tree').addEventListener('input', e => {
+        const { op: opId, field } = e.target.dataset;
+        if (opId && field && field !== 'laborType') this._applyOverride(opId, field, e.target.value);
+      });
+
+      // Modal right panel inputs + add button
+      if (this._c.mode === 'modal') {
+        const right = root.querySelector('.spgw-modal-right');
+        right.addEventListener('change', e => {
+          const { op: opId, field } = e.target.dataset;
+          if (opId && field) this._applyOverride(opId, field, e.target.value);
+        });
+        right.addEventListener('input', e => {
+          const { op: opId, field } = e.target.dataset;
+          if (opId && field && field !== 'laborType') this._applyOverride(opId, field, e.target.value);
+        });
+        right.addEventListener('click', e => {
+          const btn = e.target.closest('.spgw-rp-add-btn');
+          if (!btn) return;
+          const op = getOp(btn.dataset.op);
+          if (!op) return;
+          const isSelected = this._s.selectedOps.some(s => s.op.id === op.id);
+          isSelected ? this._deselectOp(op.id) : this._selectOp(op);
+          this._updateRightPanel(op);
+        });
+      }
+
+      // Footer chip remove
+      root.querySelector('.spgw-footer').addEventListener('click', e => {
+        const rm = e.target.closest('.spgw-chip-rm');
+        if (rm) this._deselectOp(rm.dataset.rm);
+      });
+
+      // Confirm button
+      root.querySelector('.spgw-confirm-btn').addEventListener('click', () => {
+        const payload = this._buildPayload();
+        if (this._c.onConfirm) this._c.onConfirm(payload);
+        const target = this._c.trigger || this._c.container;
+        if (target) target.dispatchEvent(new CustomEvent('spg:confirm', { detail: { operations: payload }, bubbles: true }));
+        if (this._c.mode !== 'inline') this.close();
+      });
+    }
+
+    // ── Tree rendering ─────────────────────────────────────────────────────────
+
+    _updateTree() {
+      const term = this._s.search.toLowerCase().trim();
+      const treeEl = this._root.querySelector('.spgw-tree');
+      let html = '';
+
+      for (const cat of CATEGORIES) {
+        const ops = term
+          ? cat.operations.filter(o =>
+              o.name.toLowerCase().includes(term) ||
+              o.opcode.toLowerCase().includes(term) ||
+              cat.name.toLowerCase().includes(term))
+          : cat.operations;
+
+        if (term && ops.length === 0) continue;
+
+        const expanded = term || this._s.expandedCats.has(cat.id);
+        html += `
+          <div class="spgw-cat">
+            <div class="spgw-cat-hdr" data-cat="${cat.id}">
+              <span class="spgw-caret ${expanded ? 'open' : ''}">▶</span>
+              <span class="spgw-cat-name">${esc(cat.name)}</span>
+              <span class="spgw-cat-badge ${term ? 'match' : ''}">${ops.length}</span>
+            </div>
+            <div class="spgw-cat-ops" ${expanded ? '' : 'style="display:none"'}>
+              ${ops.map(op => this._opRowHTML(op)).join('')}
+            </div>
+          </div>`;
+      }
+
+      if (!html) {
+        html = `<div class="spgw-tree-empty">No operations match "<strong>${esc(term)}</strong>"</div>`;
+      }
+
+      treeEl.innerHTML = html;
+    }
+
+    _opRowHTML(op) {
+      const selected = this._s.selectedOps.some(s => s.op.id === op.id);
+      const focused  = this._c.mode === 'modal' && this._s.focusedOp?.id === op.id;
+      const expanded = this._c.mode !== 'modal' && this._s.expandedOp === op.id;
+      const ov = this._s.overrides[op.id] || {};
+      const p  = calcPricing(op, ov);
+
+      return `
+        <div class="spgw-op ${selected ? 'is-selected' : ''} ${focused ? 'is-focused' : ''} ${expanded ? 'is-expanded' : ''}">
+          <div class="spgw-op-row" data-op-row="${op.id}">
+            ${this._c.multiSelect ? `<input type="checkbox" class="spgw-chk" data-op="${op.id}" ${selected ? 'checked' : ''} />` : ''}
+            <div class="spgw-op-info">
+              <span class="spgw-op-name">${esc(op.name)}</span>
+              <span class="spgw-op-code">${esc(op.opcode)}</span>
+            </div>
+            <span class="spgw-op-price">${fmt$(p.total)}</span>
+            ${this._c.mode !== 'modal'
+              ? `<button class="spgw-op-toggle" data-op-toggle="${op.id}">${expanded ? '▲' : '▼'}</button>`
+              : ''}
+          </div>
+          ${expanded ? this._compactPricingHTML(op, ov, p) : ''}
+        </div>`;
+    }
+
+    _compactPricingHTML(op, ov, p) {
+      return `
+        <div class="spgw-op-detail">
+          <div class="spgw-cprc">
+            <div class="spgw-cprc-labor">
+              <select class="spgw-cprc-sel" data-op="${op.id}" data-field="laborType">
+                ${LABOR_TYPES.map(lt => `<option value="${lt.id}" ${lt.id === p.ltId ? 'selected' : ''}>${esc(lt.name)}</option>`).join('')}
+              </select>
+              <input class="spgw-cprc-inp" type="number" step="0.1" min="0" value="${p.laborHours}" data-op="${op.id}" data-field="laborHours" />
+              <span class="spgw-cprc-lbl">hrs ×</span>
+              <input class="spgw-cprc-inp" type="number" step="1" min="0" value="${p.laborRate}" data-op="${op.id}" data-field="laborRate" />
+              <span class="spgw-cprc-lbl">/hr = ${fmt$(p.laborCost)}</span>
+            </div>
+            ${p.parts.length ? `
+              <div class="spgw-cprc-parts">
+                ${p.parts.map(pt => `<div class="spgw-cprc-part"><span>${esc(pt.name)} × ${pt.qty}</span><span>${fmt$(pt.price * pt.qty)}</span></div>`).join('')}
+              </div>` : ''}
+            <div class="spgw-cprc-total">
+              <span>Labor ${fmt$(p.laborCost)}</span>
+              ${p.parts.length ? `<span>Parts ${fmt$(p.partsCost)}</span>` : ''}
+              <strong>Total ${fmt$(p.total)}</strong>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // ── Modal right panel ──────────────────────────────────────────────────────
+
+    _rightPanelHTML(op) {
+      if (!op) return `
+        <div class="spgw-rp rp-empty-wrap" style="height:100%;display:flex">
+          <div class="spgw-rp-empty">
+            <span class="spgw-rp-empty-icon">🔧</span>
+            <p>Select an operation from the list<br>to view and edit pricing</p>
+          </div>
+        </div>`;
+      const ov = this._s.overrides[op.id] || {};
+      const p  = calcPricing(op, ov);
+      const isSelected = this._s.selectedOps.some(s => s.op.id === op.id);
+      return `
+        <div class="spgw-rp">
+          <div class="spgw-rp-hdr">
+            <div class="spgw-rp-name">${esc(op.name)}</div>
+            <span class="spgw-rp-tag">${esc(op.opcode)}</span>
+          </div>
+          <div class="spgw-rp-section">
+            <div class="spgw-rp-section-title">Labor</div>
+            <div class="spgw-rp-row">
+              <label class="spgw-rp-lbl">Labor Type</label>
+              <select class="spgw-rp-sel" data-op="${op.id}" data-field="laborType">
+                ${LABOR_TYPES.map(lt => `<option value="${lt.id}" ${lt.id === p.ltId ? 'selected' : ''}>${esc(lt.name)} (${fmt$(lt.rate)}/hr)</option>`).join('')}
+              </select>
+            </div>
+            <div class="spgw-rp-row">
+              <label class="spgw-rp-lbl">Labor Hours</label>
+              <input class="spgw-rp-inp" type="number" step="0.1" min="0" value="${p.laborHours}" data-op="${op.id}" data-field="laborHours" />
+            </div>
+            <div class="spgw-rp-row">
+              <label class="spgw-rp-lbl">Rate ($/hr)</label>
+              <input class="spgw-rp-inp" type="number" step="1" min="0" value="${p.laborRate}" data-op="${op.id}" data-field="laborRate" />
+            </div>
+            <div class="spgw-rp-subtotal"><span>Labor Total</span><span>${fmt$(p.laborCost)}</span></div>
+          </div>
+          <div class="spgw-rp-section">
+            <div class="spgw-rp-section-title">Parts</div>
+            ${p.parts.length
+              ? p.parts.map(pt => `<div class="spgw-rp-part"><span>${esc(pt.name)} × ${pt.qty}</span><span>${fmt$(pt.price * pt.qty)}</span></div>`).join('')
+              : '<p class="spgw-rp-no-parts">No parts required</p>'}
+            <div class="spgw-rp-subtotal"><span>Parts Total</span><span>${fmt$(p.partsCost)}</span></div>
+          </div>
+          <div class="spgw-rp-total">
+            <span class="spgw-rp-total-lbl">Total</span>
+            <span class="spgw-rp-total-val">${fmt$(p.total)}</span>
+          </div>
+          <button class="spgw-rp-add-btn ${isSelected ? 'is-selected' : ''}" data-op="${op.id}">
+            ${isSelected ? '✓ Remove from Selection' : '+ Add to Selection'}
+          </button>
+        </div>`;
+    }
+
+    _updateRightPanel(op) {
+      const right = this._root.querySelector('.spgw-modal-right');
+      if (right) right.innerHTML = this._rightPanelHTML(op);
+    }
+
+    // ── Selection ──────────────────────────────────────────────────────────────
+
+    _selectOp(op) {
+      const pricing = calcPricing(op, this._s.overrides[op.id]);
+      const idx = this._s.selectedOps.findIndex(s => s.op.id === op.id);
+      if (idx >= 0) {
+        this._s.selectedOps[idx] = { op, pricing };
+      } else {
+        this._s.selectedOps.push({ op, pricing });
+      }
+      this._updateFooter();
+      this._updateTree();
+      this._emitChange();
+    }
+
+    _deselectOp(opId) {
+      this._s.selectedOps = this._s.selectedOps.filter(s => s.op.id !== opId);
+      this._updateFooter();
+      this._updateTree();
+      if (this._c.mode === 'modal' && this._s.focusedOp?.id === opId) {
+        this._updateRightPanel(this._s.focusedOp);
+      }
+      this._emitChange();
+    }
+
+    _applyOverride(opId, field, raw) {
+      const ov = this._s.overrides[opId] || {};
+      if (field === 'laborType')   ov.laborTypeId = raw;
+      else if (field === 'laborHours') ov.laborHours = parseFloat(raw) || 0;
+      else if (field === 'laborRate')  ov.laborRate  = parseFloat(raw) || 0;
+      this._s.overrides[opId] = ov;
+
+      // If already selected, update its pricing
+      const idx = this._s.selectedOps.findIndex(s => s.op.id === opId);
+      if (idx >= 0) {
+        const op = this._s.selectedOps[idx].op;
+        this._s.selectedOps[idx].pricing = calcPricing(op, ov);
+        this._updateFooter();
+        this._emitChange();
+      }
+      // Refresh expanded compact view or modal right panel
+      if (this._c.mode !== 'modal' && this._s.expandedOp === opId) {
+        this._updateTree();
+      } else if (this._c.mode === 'modal' && this._s.focusedOp?.id === opId) {
+        this._updateRightPanel(this._s.focusedOp);
+      }
+    }
+
+    // ── Footer ─────────────────────────────────────────────────────────────────
+
+    _updateFooter() {
+      const footer  = this._root.querySelector('.spgw-footer');
+      const left    = footer.querySelector('.spgw-footer-left');
+      const right   = footer.querySelector('.spgw-footer-right');
+      const ops     = this._s.selectedOps;
+      const total   = r2(ops.reduce((s, item) => s + item.pricing.total, 0));
+
+      left.innerHTML = ops.length === 0
+        ? '<span class="spgw-no-sel">No services selected</span>'
+        : ops.map(item => `
+            <div class="spgw-chip">
+              <span class="spgw-chip-name" title="${esc(item.op.name)}">${esc(item.op.name)}</span>
+              <button class="spgw-chip-rm" data-rm="${item.op.id}">×</button>
+            </div>`).join('');
+
+      right.innerHTML = `
+        ${ops.length ? `<span class="spgw-total">${fmt$(total)}</span>` : ''}
+        <button class="spgw-confirm-btn" ${ops.length === 0 ? 'disabled' : ''}>
+          Confirm${ops.length ? ` (${ops.length})` : ''} →
+        </button>`;
+
+      // Re-bind confirm button
+      right.querySelector('.spgw-confirm-btn').addEventListener('click', () => {
+        const payload = this._buildPayload();
+        if (this._c.onConfirm) this._c.onConfirm(payload);
+        const target = this._c.trigger || this._c.container;
+        if (target) target.dispatchEvent(new CustomEvent('spg:confirm', { detail: { operations: payload }, bubbles: true }));
+        if (this._c.mode !== 'inline') this.close();
+      });
+    }
+
+    // ── Popover positioning ────────────────────────────────────────────────────
+
+    _positionPopover() {
+      const trigger = this._c.trigger;
+      if (!trigger) return;
+      const r    = trigger.getBoundingClientRect();
+      const pw   = Math.max(360, r.width);
+      const ph   = 440;
+      const gap  = 6;
+      const top  = (window.innerHeight - r.bottom > ph || r.top < ph)
+        ? r.bottom + gap
+        : r.top - ph - gap;
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - pw - 8));
+      Object.assign(this._root.style, {
+        top:      `${top}px`,
+        left:     `${left}px`,
+        width:    `${pw}px`,
+        maxHeight:`${Math.min(ph, window.innerHeight - top - 12)}px`,
+      });
+    }
+
+    // ── Emit & payload ─────────────────────────────────────────────────────────
+
+    _buildPayload() {
+      return this._s.selectedOps.map(({ op, pricing }) => ({
+        operationId:   op.id,
+        operationName: op.name,
+        opcode:        op.opcode,
+        laborTypeId:   pricing.ltId,
+        laborHours:    pricing.laborHours,
+        laborRate:     pricing.laborRate,
+        laborCost:     pricing.laborCost,
+        parts:         pricing.parts,
+        partsCost:     pricing.partsCost,
+        totalPrice:    pricing.total,
+      }));
+    }
+
+    _emitChange() {
+      if (this._c.onChange) this._c.onChange(this._buildPayload());
+    }
+  }
+
+  // ─── Style injection (once per page) ─────────────────────────────────────────
+
+  function _injectStyles() {
+    if (document.getElementById('spgw-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'spgw-styles';
+    s.textContent = STYLES;
+    document.head.appendChild(s);
+  }
+
+  // ─── Public API ───────────────────────────────────────────────────────────────
+
+  global.SPGWidget = {
+    /**
+     * Full config init.
+     * @param {object} config
+     * @param {'inline'|'popover'|'modal'} [config.mode]
+     * @param {string|Element} [config.container]  - for inline mode
+     * @param {string|Element} [config.trigger]    - element that opens the widget
+     * @param {object}  [config.vehicleContext]    - { year, make, model, trim, engine }
+     * @param {boolean} [config.multiSelect=true]
+     * @param {function} [config.onConfirm]        - called with operations[] on confirm
+     * @param {function} [config.onChange]         - called on every selection change
+     */
+    init(config) {
+      const w = new SPGWidgetCore(config);
+      w.init();
+      if (config.mode === 'inline' || !config.trigger) w.open && w._root && null; // inline is always open
+      return w;
+    },
+
+    /**
+     * Convenience: attach a popover to an existing element.
+     * @param {string|Element} trigger
+     * @param {object} config
+     */
+    attach(trigger, config) {
+      return this.init({ mode: 'popover', ...config, trigger });
+    },
+  };
+
+})(window);

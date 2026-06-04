@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPG Widget — Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #f1f5f9; min-height: 100vh; color: #1e293b; }
+
+    /* ── Top bar ── */
+    .topbar { background: #0f172a; padding: 0 24px; display: flex; align-items: center; gap: 14px; height: 52px; }
+    .topbar-logo { font-size: 15px; font-weight: 800; color: #fff; }
+    .topbar-logo span { color: #38bdf8; }
+    .topbar-badge { font-size: 11px; font-weight: 600; background: #1e3a8a; color: #93c5fd; padding: 2px 8px; border-radius: 10px; }
+    .topbar-file { margin-left: auto; font-size: 11px; color: #64748b; font-family: monospace; }
+
+    /* ── Tabs ── */
+    .tab-nav { background: #1e293b; padding: 0 24px; display: flex; gap: 2px; }
+    .tab-btn { padding: 12px 18px; font-size: 13px; font-weight: 600; color: #64748b; background: none; border: none; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; transition: color .15s, border-color .15s; }
+    .tab-btn:hover { color: #e2e8f0; }
+    .tab-btn.active { color: #fff; border-bottom-color: #38bdf8; }
+    .tab-label { font-size: 13px; font-weight: 600; }
+    .tab-sub { font-size: 10px; font-weight: 400; opacity: .65; }
+
+    /* ── Pages ── */
+    .page { display: none; padding: 24px; }
+    .page.active { display: block; }
+    .page-hdr { margin-bottom: 20px; }
+    .page-hdr h2 { font-size: 16px; font-weight: 700; margin-bottom: 5px; }
+    .page-hdr p { font-size: 13px; color: #64748b; line-height: 1.5; }
+    .page-hdr code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 1px 6px; font-size: 12px; color: #0f172a; }
+
+    /* ── Demo layouts ── */
+    .demo-grid { display: grid; gap: 20px; align-items: start; }
+    .demo-grid.two-col { grid-template-columns: 1fr 340px; }
+    .demo-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* ── Simulated host UI ── */
+    .host-ui { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    .host-ui-bar { background: #1e3a8a; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+    .host-ui-bar-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .host-ui-bar-dot:nth-child(1) { background: #ef4444; }
+    .host-ui-bar-dot:nth-child(2) { background: #f59e0b; }
+    .host-ui-bar-dot:nth-child(3) { background: #22c55e; }
+    .host-ui-bar-title { font-size: 12px; color: rgba(255,255,255,.7); margin-left: 6px; }
+    .host-ui-body { padding: 16px; }
+    .host-form-row { margin-bottom: 14px; }
+    .host-form-row label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .host-input { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; color: #1e293b; outline: none; transition: border-color .15s, box-shadow .15s; background: #fff; }
+    .host-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+    .host-inline-slot { border: 2px dashed #e2e8f0; border-radius: 8px; min-height: 380px; margin-bottom: 14px; overflow: hidden; }
+    .host-inline-slot.has-widget { border: none; }
+    .host-modal-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .host-modal-btn:hover { background: #1d4ed8; }
+    .host-form-note { font-size: 12px; color: #94a3b8; font-style: italic; }
+    .host-result { margin-top: 12px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #166534; display: none; }
+    .host-result.visible { display: block; }
+    .host-result strong { display: block; margin-bottom: 3px; font-size: 13px; }
+
+    /* ── Output panel ── */
+    .out-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; position: sticky; top: 80px; }
+    .out-panel-hdr { padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid #f1f5f9; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
+    .out-clear { font-size: 11px; font-weight: 600; color: #94a3b8; background: none; border: none; cursor: pointer; text-transform: none; letter-spacing: 0; }
+    .out-clear:hover { color: #dc2626; }
+    .out-body { padding: 12px 14px; max-height: 480px; overflow-y: auto; }
+    .out-hint { font-size: 12px; color: #94a3b8; font-style: italic; line-height: 1.5; }
+    .out-pre { font-size: 11px; color: #1e293b; white-space: pre-wrap; word-break: break-all; line-height: 1.55; display: none; }
+    .out-panel.has-data .out-hint { display: none; }
+    .out-panel.has-data .out-pre { display: block; }
+
+    /* ── Code snippet ── */
+    .snippet { background: #0f172a; border-radius: 8px; padding: 14px 16px; margin-top: 16px; }
+    .snippet pre { font-size: 12px; color: #94a3b8; line-height: 1.6; overflow-x: auto; }
+    .snippet pre .kw { color: #7dd3fc; }
+    .snippet pre .str { color: #86efac; }
+    .snippet pre .fn { color: #fde68a; }
+    .snippet pre .cm { color: #4b5563; }
+
+    @media (max-width: 900px) {
+      .demo-grid.two-col, .demo-grid.three-col { grid-template-columns: 1fr; }
+      .out-panel { position: static; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="topbar-logo">SPG <span>Widget</span></div>
+    <span class="topbar-badge">v0.2 · Unified</span>
+    <span class="topbar-file">spg-widget.js · single file · three modes</span>
+  </div>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="popover">
+      <span class="tab-label">Popover</span>
+      <span class="tab-sub">Attaches to any input or button</span>
+    </button>
+    <button class="tab-btn" data-tab="modal">
+      <span class="tab-label">Modal</span>
+      <span class="tab-sub">Full two-panel dialog</span>
+    </button>
+    <button class="tab-btn" data-tab="inline">
+      <span class="tab-label">Inline</span>
+      <span class="tab-sub">Embedded in tight space</span>
+    </button>
+  </nav>
+
+  <!-- ══ POPOVER ══════════════════════════════════════════════════════════════ -->
+  <div class="page active" id="tab-popover">
+    <div class="page-hdr">
+      <h2>Popover — attaches to any existing trigger</h2>
+      <p>
+        Call <code>SPGWidget.attach('#my-input', { onConfirm })</code> and the widget floats below the trigger on focus/click.
+        Zero changes required to the host UI's markup.
+      </p>
+    </div>
+    <div class="demo-grid two-col">
+
+      <!-- Simulated host app with a search input -->
+      <div>
+        <div class="host-ui">
+          <div class="host-ui-bar">
+            <div class="host-ui-bar-dot"></div><div class="host-ui-bar-dot"></div><div class="host-ui-bar-dot"></div>
+            <span class="host-ui-bar-title">Web Scheduler — Service Selection</span>
+          </div>
+          <div class="host-ui-body">
+            <div class="host-form-row">
+              <label>Customer</label>
+              <input class="host-input" type="text" value="John Smith" />
+            </div>
+            <div class="host-form-row">
+              <label>Vehicle</label>
+              <input class="host-input" type="text" value="2022 Toyota Camry XSE 2.5L" readonly />
+            </div>
+            <div class="host-form-row">
+              <label>Services Requested</label>
+              <!-- This is the only thing that changes: add an id to an existing input -->
+              <input id="popover-trigger" class="host-input" type="text" placeholder="Click to search services…" readonly
+                     style="cursor:pointer" />
+              <p class="host-form-note" style="margin-top:5px">Click the field above to open the SPG widget</p>
+            </div>
+            <div class="host-result" id="popover-result">
+              <strong>Services added to appointment:</strong>
+              <span id="popover-result-text"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="snippet">
+          <pre><span class="cm">// Drop-in integration — no markup changes needed</span>
+<span class="kw">import</span> <span class="str">'spg-widget.js'</span>;
+
+SPGWidget.<span class="fn">attach</span>(<span class="str">'#service-search-input'</span>, {
+  vehicleContext: { year: <span class="str">2022</span>, make: <span class="str">'Toyota'</span>, model: <span class="str">'Camry'</span> },
+  <span class="fn">onConfirm</span>: (operations) =&gt; saveToAppointment(operations),
+});</pre>
+        </div>
+      </div>
+
+      <div class="out-panel" id="out-popover">
+        <div class="out-panel-hdr">
+          Confirmed Payload
+          <button class="out-clear" onclick="clearOut('popover')">Clear</button>
+        </div>
+        <div class="out-body">
+          <p class="out-hint">Confirm a selection in the widget to see the structured payload returned to your app.</p>
+          <pre class="out-pre" id="out-popover-pre"></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ MODAL ════════════════════════════════════════════════════════════════ -->
+  <div class="page" id="tab-modal">
+    <div class="page-hdr">
+      <h2>Modal — full two-panel dialog</h2>
+      <p>
+        Use <code>mode: 'modal'</code> when you need more space — pricing detail in a right panel, full category tree on the left.
+        Trigger with any button or call <code>widget.open()</code> programmatically.
+      </p>
+    </div>
+    <div class="demo-grid two-col">
+
+      <div class="host-ui">
+        <div class="host-ui-bar">
+          <div class="host-ui-bar-dot"></div><div class="host-ui-bar-dot"></div><div class="host-ui-bar-dot"></div>
+          <span class="host-ui-bar-title">Desktop Scheduler — Service Cart</span>
+        </div>
+        <div class="host-ui-body">
+          <div class="host-form-row">
+            <label>RO # / Appointment</label>
+            <input class="host-input" type="text" value="RO-2024-08712" />
+          </div>
+          <div class="host-form-row">
+            <label>Vehicle</label>
+            <input class="host-input" type="text" value="2021 Ford F-150 XLT 3.5L EcoBoost" readonly />
+          </div>
+          <div class="host-form-row">
+            <label>Services</label>
+            <button class="host-modal-btn" id="modal-trigger">
+              ＋ Add Service Operations
+            </button>
+          </div>
+          <div class="host-result" id="modal-result">
+            <strong>Selected operations:</strong>
+            <span id="modal-result-text"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="out-panel" id="out-modal">
+        <div class="out-panel-hdr">
+          Confirmed Payload
+          <button class="out-clear" onclick="clearOut('modal')">Clear</button>
+        </div>
+        <div class="out-body">
+          <p class="out-hint">Click "Add Service Operations" and confirm a selection to see the payload.</p>
+          <pre class="out-pre" id="out-modal-pre"></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ INLINE ════════════════════════════════════════════════════════════════ -->
+  <div class="page" id="tab-inline">
+    <div class="page-hdr">
+      <h2>Inline — embedded in a tight space</h2>
+      <p>
+        Use <code>mode: 'inline'</code> to render directly into a container. Pricing expands inline per operation — no separate panel needed.
+        Good for sidebars, drawers, or dedicated service-selection panels.
+      </p>
+    </div>
+    <div class="demo-grid two-col">
+
+      <div class="host-ui">
+        <div class="host-ui-bar">
+          <div class="host-ui-bar-dot"></div><div class="host-ui-bar-dot"></div><div class="host-ui-bar-dot"></div>
+          <span class="host-ui-bar-title">MCI — Service Selection Panel</span>
+        </div>
+        <div class="host-ui-body" style="padding:0">
+          <div class="host-inline-slot has-widget" id="inline-slot" style="min-height:420px"></div>
+        </div>
+      </div>
+
+      <div class="out-panel" id="out-inline">
+        <div class="out-panel-hdr">
+          Confirmed Payload
+          <button class="out-clear" onclick="clearOut('inline')">Clear</button>
+        </div>
+        <div class="out-body">
+          <p class="out-hint">Select services in the embedded widget and click Confirm to see the payload.</p>
+          <pre class="out-pre" id="out-inline-pre"></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ Script ════════════════════════════════════════════════════════════════ -->
+  <script src="./src/spg-widget.js"></script>
+  <script>
+    // ── Tab switching ──────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+      });
+    });
+
+    // ── Output helpers ─────────────────────────────────────────────────────────
+    function showOut(key, operations) {
+      const panel = document.getElementById('out-' + key);
+      const pre   = document.getElementById('out-' + key + '-pre');
+      panel.classList.toggle('has-data', operations.length > 0);
+      pre.textContent = operations.length ? JSON.stringify(operations, null, 2) : '';
+    }
+    function clearOut(key) {
+      document.getElementById('out-' + key).classList.remove('has-data');
+      document.getElementById('out-' + key + '-pre').textContent = '';
+    }
+
+    // ── Popover: attach to existing input ─────────────────────────────────────
+    SPGWidget.attach('#popover-trigger', {
+      vehicleContext: { year: 2022, make: 'Toyota', model: 'Camry', trim: 'XSE', engine: '2.5L' },
+      onConfirm(operations) {
+        showOut('popover', operations);
+        // Update the host input value with a summary
+        const input = document.getElementById('popover-trigger');
+        input.value = operations.map(o => o.operationName).join(', ');
+        const result = document.getElementById('popover-result');
+        const text   = document.getElementById('popover-result-text');
+        result.classList.add('visible');
+        text.textContent = operations.map(o => `${o.operationName} (${('$' + o.totalPrice.toFixed(2))})`).join(' · ');
+      },
+    });
+
+    // ── Modal: triggered by button ────────────────────────────────────────────
+    SPGWidget.init({
+      mode:    'modal',
+      trigger: '#modal-trigger',
+      vehicleContext: { year: 2021, make: 'Ford', model: 'F-150', trim: 'XLT', engine: '3.5L EcoBoost' },
+      onConfirm(operations) {
+        showOut('modal', operations);
+        const result = document.getElementById('modal-result');
+        const text   = document.getElementById('modal-result-text');
+        result.classList.add('visible');
+        text.textContent = operations.map(o => `${o.operationName} (${('$' + o.totalPrice.toFixed(2))})`).join(' · ');
+      },
+    });
+
+    // ── Inline: embedded directly ──────────────────────────────────────────────
+    const inlineWidget = SPGWidget.init({
+      mode:      'inline',
+      container: '#inline-slot',
+      vehicleContext: { year: 2023, make: 'Honda', model: 'Accord', trim: 'Sport' },
+      onConfirm(operations) {
+        showOut('inline', operations);
+      },
+    });
+  </script>
+
+</body>
+</html>
