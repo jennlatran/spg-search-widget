@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPG Widget – Desktop / Web Scheduler</title>
+  <style>
+    body { margin: 0; background: #f1f5f9; font-family: system-ui, sans-serif; padding: 20px; min-height: 100vh; }
+    h1 { font-size: 18px; color: #1e293b; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+    .layout { display: grid; grid-template-columns: 1fr 380px; gap: 20px; max-width: 1100px; }
+    #spg-container { min-height: 600px; }
+    .output-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    .output-panel h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; margin: 0; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; background: #f8fafc; }
+    .output-body { padding: 12px 14px; }
+    pre { font-size: 11px; color: #1e293b; white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
+    .hint { font-size: 12px; color: #94a3b8; font-style: italic; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>SPG Search Widget — Desktop / Web Scheduler</h1>
+  <p class="subtitle">Multi-select tree view with full pricing detail panel. Supports manual labor/parts override.</p>
+
+  <div class="layout">
+    <div id="spg-container"></div>
+
+    <div class="output-panel">
+      <h2>Parent Container Output</h2>
+      <div class="output-body">
+        <p class="hint" id="hint">Select operations to see the payload returned to the parent container.</p>
+        <pre id="output"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="../src/spg-desktop.js"></script>
+  <script>
+    const widget = SPGDesktopWidget.init({
+      container: '#spg-container',
+
+      vehicleContext: {
+        year:   2022,
+        make:   'Toyota',
+        model:  'Camry',
+        trim:   'XSE',
+        engine: '2.5L',
+      },
+
+      multiSelect: true,
+
+      onOperationSelected(operations) {
+        const hint = document.getElementById('hint');
+        const output = document.getElementById('output');
+        if (operations.length === 0) {
+          hint.style.display = '';
+          output.textContent = '';
+          return;
+        }
+        hint.style.display = 'none';
+        output.textContent = JSON.stringify(operations, null, 2);
+      },
+    });
+
+    // Also listen via DOM event (alternative to callback)
+    document.getElementById('spg-container').addEventListener('spg:operations-changed', e => {
+      console.log('[spg:operations-changed]', e.detail.operations);
+    });
+  </script>
+</body>
+</html>
