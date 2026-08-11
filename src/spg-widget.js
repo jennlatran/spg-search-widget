@@ -688,20 +688,22 @@
         });
       }
 
-      // Footer chip remove
-      root.querySelector('.spgw-footer').addEventListener('click', e => {
-        const rm = e.target.closest('.spgw-chip-rm');
-        if (rm) this._deselectOp(rm.dataset.rm);
-      });
+      if (this._c.multiSelect) {
+        // Footer chip remove
+        root.querySelector('.spgw-footer').addEventListener('click', e => {
+          const rm = e.target.closest('.spgw-chip-rm');
+          if (rm) this._deselectOp(rm.dataset.rm);
+        });
 
-      // Confirm button
-      root.querySelector('.spgw-confirm-btn').addEventListener('click', () => {
-        const payload = this._buildPayload();
-        if (this._c.onConfirm) this._c.onConfirm(payload);
-        const target = this._c.trigger || this._c.container;
-        if (target) target.dispatchEvent(new CustomEvent('spg:confirm', { detail: { operations: payload }, bubbles: true }));
-        if (this._c.mode !== 'inline') this.close();
-      });
+        // Confirm button
+        root.querySelector('.spgw-confirm-btn').addEventListener('click', () => {
+          const payload = this._buildPayload();
+          if (this._c.onConfirm) this._c.onConfirm(payload);
+          const target = this._c.trigger || this._c.container;
+          if (target) target.dispatchEvent(new CustomEvent('spg:confirm', { detail: { operations: payload }, bubbles: true }));
+          if (this._c.mode !== 'inline') this.close();
+        });
+      }
     }
 
     // ── Tree rendering ─────────────────────────────────────────────────────────
