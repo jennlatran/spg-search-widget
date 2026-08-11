@@ -57,6 +57,28 @@ SPGWidget.init({
 
 ---
 
+## Cascading Selection Wizard
+
+By default (`multiSelect: false`), picking a Service Operation doesn't immediately select it — many operations resolve through additional levels before they're a complete line item:
+
+```
+Operation   (e.g. Door Handle R&R)
+  → Application  (Exterior Door Handle, Door Handle Gasket)
+    → Position   (Front Right Door, Front Left Door, …)
+      → Qualifier (Black paint (US), Red paint (Japan), …)
+        → Labor   (Labor Type + Labor Hours)
+```
+
+Each level is fetched only after the prior one is chosen — the widget doesn't preload the whole tree. A level with zero options is skipped entirely (straight to the next level, or straight to Labor); a level with exactly one option auto-selects it and advances. Not every operation has all three sub-levels — some have none (straight to Labor, same as before), some only Applications, etc.
+
+- **Back** steps back one level at a time to change an earlier choice (this re-resolves everything after it); from the very first step it exits the wizard entirely, back to the operation list, with nothing selected.
+- **Editing a confirmed selection** — clicking an already-confirmed operation's row again reopens the wizard on the Labor step with its previous choices restored, so Back can revisit and change any earlier answer.
+- Confirming (Apply) attaches the resolved Application/Position/Qualifier to the payload (see below) and closes the widget (except in `inline` mode, which stays open).
+
+Set `multiSelect: true` to opt out of this flow entirely and use the original checkbox multi-select behavior instead (no wizard; Labor Type/Hours edited directly per row or in the modal's right panel).
+
+---
+
 ## API
 
 ### `SPGWidget.attach(trigger, config)`
@@ -76,7 +98,7 @@ Convenience method. Equivalent to `SPGWidget.init({ mode: 'popover', trigger, ..
 | `container` | `string \| Element` | — | Target element for inline mode |
 | `trigger` | `string \| Element` | — | Element that opens the widget (popover/modal) |
 | `vehicleContext` | `object` | `{}` | `{ year, make, model, trim, engine }` — displayed in the widget header |
-| `multiSelect` | `boolean` | `true` | Allow selecting multiple operations |
+| `multiSelect` | `boolean` | `false` | `false` (default): single-select radio flow — choosing an operation opens a step-by-step Application → Position → Qualifier → Labor wizard. `true`: checkbox multi-select with inline/right-panel Labor editing, no wizard |
 | `onConfirm` | `function` | — | Called with `operations[]` when the user confirms |
 | `onChange` | `function` | — | Called with `operations[]` on every selection change |
 
@@ -110,18 +132,24 @@ document.getElementById('service-search').addEventListener('spg:confirm', (e) =>
 ```json
 [
   {
-    "operationId":   "op-brk-f",
-    "operationName": "Brake Pad Replacement – Front",
-    "opcode":        "BRK-PAD-F",
-    "laborTypeId":   "standard",
-    "laborHours":    1.5,
-    "laborRate":     95,
-    "laborCost":     142.50,
+    "operationId":     "op-drhandle",
+    "operationName":   "Door Handle R&R",
+    "opcode":          "BODY-DRHANDLE",
+    "applicationId":   "app-ext",
+    "applicationName": "Exterior Door Handle",
+    "positionId":      "pos-fr",
+    "positionName":    "Front Right Door",
+    "qualifierId":     "q-blk-us",
+    "qualifierName":   "Black paint (US)",
+    "laborTypeId":     "standard",
+    "laborHours":      0.5,
+    "laborRate":       95,
+    "laborCost":       47.50,
     "parts": [
-      { "id": "p7", "name": "Front Brake Pad Set", "price": 64.99, "qty": 1 }
+      { "id": "p1", "name": "Door Handle", "price": 34.99, "qty": 1 }
     ],
-    "partsCost":  64.99,
-    "totalPrice": 207.49
+    "partsCost":  34.99,
+    "totalPrice": 82.49
   }
 ]
 ```
@@ -133,6 +161,9 @@ document.getElementById('service-search').addEventListener('spg:confirm', (e) =>
 | `operationId` | `string` | Unique operation identifier |
 | `operationName` | `string` | Display name |
 | `opcode` | `string` | Legacy opcode mapping |
+| `applicationId` / `applicationName` | `string \| null` | Resolved via the wizard; `null` if the operation has no Applications or `multiSelect: true` was used |
+| `positionId` / `positionName` | `string \| null` | Resolved via the wizard; `null` if skipped or not applicable |
+| `qualifierId` / `qualifierName` | `string \| null` | Resolved via the wizard; `null` if skipped or not applicable |
 | `laborTypeId` | `string` | Selected labor type (`standard`, `premium`, `express`) |
 | `laborHours` | `number` | Hours — editable by user |
 | `laborRate` | `number` | $/hr — editable by user |
@@ -147,11 +178,8 @@ document.getElementById('service-search').addEventListener('spg:confirm', (e) =>
 
 - **Operation search** — filter by name, category, or opcode
 - **Category tree** — collapsed by default, auto-expands on search
-- **Multi-select** — checkbox-driven; toggle off with `multiSelect: false`
-- **Labor overrides** — change labor type, hours, or rate; total updates live
-- **Pricing detail**
-  - *Inline/popover*: expands accordion-style per operation row
-  - *Modal*: dedicated right panel
+- **Cascading selection wizard** (default) — single-select radio flow that resolves Operation → Application → Position → Qualifier → Labor, fetching each level only after the prior choice is made; see [Cascading Selection Wizard](#cascading-selection-wizard) above
+- **Multi-select** — opt in with `multiSelect: true` for checkbox-driven selection with inline Labor Type/Hours editing (no wizard)
 - **Keyboard** — `Escape` closes popover and modal
 - **No dependencies** — vanilla JS, zero npm packages required
 - **Scoped styles** — all CSS prefixed under `.spgw-*` to avoid conflicts with host app styles
