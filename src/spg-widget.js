@@ -1049,8 +1049,8 @@
       const p = calcPricing(op, ov);
       this._s.wizard.step = 'labor';
       this._s.wizard.loading = false;
-      this._s.wizard.laborTypeId = p.ltId;
-      this._s.wizard.laborHours  = p.laborHours;
+      if (this._s.wizard.laborTypeId == null) this._s.wizard.laborTypeId = p.ltId;
+      if (this._s.wizard.laborHours  == null) this._s.wizard.laborHours  = p.laborHours;
       this._render();
     }
 
