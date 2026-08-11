@@ -401,9 +401,11 @@
         expandedCats: new Set(),
         expandedOp:   null,  // compact: which op is priced inline
         focusedOp:    null,  // modal: which op shows in right panel
-        selectedOps:  [],    // [{ op, pricing }]
+        selectedOps:  [],    // [{ op, pricing, wizard? }]
         overrides:    {},    // { [opId]: { laborTypeId?, laborHours?, laborRate? } }
+        wizard:       null,  // set below via _resetWizard()
       };
+      this._s.wizard = this._resetWizard();
       this._root     = null;
       this._isOpen   = false;
       this._onOutside = null;
@@ -865,6 +867,177 @@
       } else if (this._c.mode === 'modal' && this._s.focusedOp?.id === opId) {
         this._updateRightPanel(this._s.focusedOp);
       }
+    }
+
+    // ── Wizard controller ──────────────────────────────────────────────────────
+    // Drives Operation -> Application -> Position -> Qualifier -> Labor for the
+    // single-select (multiSelect: false) flow. Each level is fetched only after
+    // the prior one is chosen, matching how the real MOTOR data source works.
+    // A level with 0 options is skipped; exactly 1 option auto-selects and
+    // advances. See docs/plans/2026-08-10-cascading-selection-wizard-design.md.
+
+    _resetWizard() {
+      return {
+        opId: null, step: null, loading: false, error: null,
+        applications: [], application: null,
+        positions: [],    position:    null,
+        qualifiers: [],   qualifier:   null,
+        laborTypeId: null, laborHours: null,
+      };
+    }
+
+    _isOpActive(opId) {
+      return this._s.wizard.opId === opId || this._s.selectedOps.some(s => s.op.id === opId);
+    }
+
+    _startWizard(op) {
+      this._s.wizard = this._resetWizard();
+      this._s.wizard.opId = op.id;
+      this._wizardResolveApplications(op);
+    }
+
+    _wizardCancel() {
+      this._s.wizard = this._resetWizard();
+      this._render();
+    }
+
+    _wizardGoToLabor(op) {
+      const ov = this._s.overrides[op.id] || {};
+      const p = calcPricing(op, ov);
+      this._s.wizard.step = 'labor';
+      this._s.wizard.loading = false;
+      this._s.wizard.laborTypeId = p.ltId;
+      this._s.wizard.laborHours  = p.laborHours;
+      this._render();
+    }
+
+    _wizardResolveApplications(op) {
+      this._s.wizard.loading = true;
+      this._s.wizard.error = null;
+      this._render();
+      fetchLevel(op.applications || []).then(applications => {
+        this._s.wizard.applications = applications;
+        this._s.wizard.loading = false;
+        if (applications.length === 0) { this._wizardGoToLabor(op); return; }
+        if (applications.length === 1) { this._wizardSelectApplication(applications[0]); return; }
+        this._s.wizard.step = 'application';
+        this._render();
+      }).catch(err => {
+        this._s.wizard.loading = false;
+        this._s.wizard.error = { step: 'application', message: err.message };
+        this._render();
+      });
+    }
+
+    _wizardSelectApplication(application) {
+      const op = getOp(this._s.wizard.opId);
+      const changed = this._s.wizard.application?.id !== application.id;
+      this._s.wizard.application = application;
+      if (changed) {
+        this._s.wizard.positions = []; this._s.wizard.position = null;
+        this._s.wizard.qualifiers = []; this._s.wizard.qualifier = null;
+      }
+      this._wizardResolvePositions(op, application);
+    }
+
+    _wizardResolvePositions(op, application) {
+      this._s.wizard.loading = true;
+      this._s.wizard.error = null;
+      this._render();
+      fetchLevel(application.positions || []).then(positions => {
+        this._s.wizard.positions = positions;
+        this._s.wizard.loading = false;
+        if (positions.length === 0) { this._wizardGoToLabor(op); return; }
+        if (positions.length === 1) { this._wizardSelectPosition(positions[0]); return; }
+        this._s.wizard.step = 'position';
+        this._render();
+      }).catch(err => {
+        this._s.wizard.loading = false;
+        this._s.wizard.error = { step: 'position', message: err.message };
+        this._render();
+      });
+    }
+
+    _wizardSelectPosition(position) {
+      const op = getOp(this._s.wizard.opId);
+      const changed = this._s.wizard.position?.id !== position.id;
+      this._s.wizard.position = position;
+      if (changed) { this._s.wizard.qualifiers = []; this._s.wizard.qualifier = null; }
+      this._wizardResolveQualifiers(op, position);
+    }
+
+    _wizardResolveQualifiers(op, position) {
+      this._s.wizard.loading = true;
+      this._s.wizard.error = null;
+      this._render();
+      fetchLevel(position.qualifiers || []).then(qualifiers => {
+        this._s.wizard.qualifiers = qualifiers;
+        this._s.wizard.loading = false;
+        if (qualifiers.length === 0) { this._wizardGoToLabor(op); return; }
+        if (qualifiers.length === 1) { this._wizardSelectQualifier(qualifiers[0]); return; }
+        this._s.wizard.step = 'qualifier';
+        this._render();
+      }).catch(err => {
+        this._s.wizard.loading = false;
+        this._s.wizard.error = { step: 'qualifier', message: err.message };
+        this._render();
+      });
+    }
+
+    _wizardSelectQualifier(qualifier) {
+      const op = getOp(this._s.wizard.opId);
+      this._s.wizard.qualifier = qualifier;
+      this._wizardGoToLabor(op);
+    }
+
+    _wizardBack() {
+      const w = this._s.wizard;
+      if (w.step === 'labor') {
+        w.step = w.qualifiers.length ? 'qualifier'
+               : w.positions.length  ? 'position'
+               : w.applications.length ? 'application'
+               : null;
+      } else if (w.step === 'qualifier')   { w.step = 'position'; }
+      else if (w.step === 'position')      { w.step = 'application'; }
+      else if (w.step === 'application')   { this._wizardCancel(); return; }
+      if (!w.step) { this._wizardCancel(); return; }
+      this._render();
+    }
+
+    _wizardRetry() {
+      const op = getOp(this._s.wizard.opId);
+      const w = this._s.wizard;
+      if (w.error?.step === 'application') this._wizardResolveApplications(op);
+      else if (w.error?.step === 'position')  this._wizardResolvePositions(op, w.application);
+      else if (w.error?.step === 'qualifier') this._wizardResolveQualifiers(op, w.position);
+    }
+
+    _wizardSetLabor(field, raw) {
+      if (field === 'laborType')  this._s.wizard.laborTypeId = raw;
+      if (field === 'laborHours') this._s.wizard.laborHours  = parseFloat(raw) || 0;
+    }
+
+    _wizardConfirm() {
+      const op = getOp(this._s.wizard.opId);
+      const ov = { laborTypeId: this._s.wizard.laborTypeId, laborHours: this._s.wizard.laborHours };
+      const pricing = calcPricing(op, ov);
+      this._s.selectedOps = [{
+        op, pricing,
+        wizard: {
+          application: this._s.wizard.application,
+          position:    this._s.wizard.position,
+          qualifier:   this._s.wizard.qualifier,
+        },
+      }];
+      this._emitChange();
+      const payload = this._buildPayload();
+      if (this._c.onConfirm) this._c.onConfirm(payload);
+      const target = this._c.trigger || this._c.container;
+      if (target) target.dispatchEvent(new CustomEvent('spg:confirm', { detail: { operations: payload }, bubbles: true }));
+      this._s.selectedOps = [];
+      this._s.wizard = this._resetWizard();
+      this._render();
+      if (this._c.mode !== 'inline') this.close();
     }
 
     // ── Footer ─────────────────────────────────────────────────────────────────
