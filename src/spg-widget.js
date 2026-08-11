@@ -715,7 +715,13 @@
         if (e.target.dataset.wizField === 'laborType') { this._wizardSetLabor('laborType', e.target.value); this._render(); }
       });
       root.addEventListener('input', e => {
-        if (e.target.dataset.wizField === 'laborHours') { this._wizardSetLabor('laborHours', e.target.value); this._render(); }
+        if (e.target.dataset.wizField !== 'laborHours') return;
+        this._wizardSetLabor('laborHours', e.target.value);
+        const op = getOp(this._s.wizard.opId);
+        const w = this._s.wizard;
+        const p = calcPricing(op, { laborTypeId: w.laborTypeId, laborHours: w.laborHours });
+        const totalEl = this._root.querySelector('.spgw-wiz-total strong');
+        if (totalEl) totalEl.textContent = fmt$(p.total);
       });
     }
 
