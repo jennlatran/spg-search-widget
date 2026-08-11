@@ -1190,7 +1190,6 @@
       if (this._c.onConfirm) this._c.onConfirm(payload);
       const target = this._c.trigger || this._c.container;
       if (target) target.dispatchEvent(new CustomEvent('spg:confirm', { detail: { operations: payload }, bubbles: true }));
-      this._s.selectedOps = [];
       this._s.wizard = this._resetWizard();
       this._render();
       if (this._c.mode !== 'inline') this.close();
