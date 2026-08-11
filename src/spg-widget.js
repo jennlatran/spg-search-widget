@@ -702,7 +702,6 @@
         if (!actionBtn) return;
         const action = actionBtn.dataset.wizAction;
         if (action === 'back')   { this._wizardBack(); return; }
-        if (action === 'cancel') { this._wizardCancel(); return; }
         if (action === 'retry')  { this._wizardRetry(); return; }
         if (action === 'apply')  { this._wizardConfirm(); return; }
         const id = actionBtn.dataset.wizId;
@@ -903,9 +902,8 @@
       return `
         <div class="spgw-wiz">
           <div class="spgw-wiz-hdr">
-            <button class="spgw-wiz-back" data-wiz-action="back" ${w.step === 'application' ? 'style="visibility:hidden"' : ''}>‹ Back</button>
+            <button class="spgw-wiz-back" data-wiz-action="back">‹ Back</button>
             <div class="spgw-wiz-crumbs">${crumbs.map(esc).join(' › ')}</div>
-            <button class="spgw-wiz-cancel" data-wiz-action="cancel">✕</button>
           </div>
           <div class="spgw-wiz-body">
             ${w.loading ? this._wizardLoadingHTML()
