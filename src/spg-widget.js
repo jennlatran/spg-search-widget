@@ -1248,17 +1248,23 @@
     // ── Emit & payload ─────────────────────────────────────────────────────────
 
     _buildPayload() {
-      return this._s.selectedOps.map(({ op, pricing }) => ({
-        operationId:   op.id,
-        operationName: op.name,
-        opcode:        op.opcode,
-        laborTypeId:   pricing.ltId,
-        laborHours:    pricing.laborHours,
-        laborRate:     pricing.laborRate,
-        laborCost:     pricing.laborCost,
-        parts:         pricing.parts,
-        partsCost:     pricing.partsCost,
-        totalPrice:    pricing.total,
+      return this._s.selectedOps.map(({ op, pricing, wizard }) => ({
+        operationId:     op.id,
+        operationName:   op.name,
+        opcode:          op.opcode,
+        applicationId:   wizard?.application?.id   ?? null,
+        applicationName: wizard?.application?.name ?? null,
+        positionId:      wizard?.position?.id       ?? null,
+        positionName:    wizard?.position?.name     ?? null,
+        qualifierId:     wizard?.qualifier?.id       ?? null,
+        qualifierName:   wizard?.qualifier?.name     ?? null,
+        laborTypeId:     pricing.ltId,
+        laborHours:      pricing.laborHours,
+        laborRate:       pricing.laborRate,
+        laborCost:       pricing.laborCost,
+        parts:           pricing.parts,
+        partsCost:       pricing.partsCost,
+        totalPrice:      pricing.total,
       }));
     }
 
