@@ -49,9 +49,48 @@
     {
       id: 'body-frame', name: 'Body & Frame',
       operations: [
-        { id: 'op-cpillar',   name: 'C Pillar Baffle Plate R&R',   group: 'Body Panels', opcode: 'BODY-CPILLAR', laborHours: 0.8, laborTypeId: 'standard', parts: [], isDefault: false },
+        { id: 'op-cpillar',   name: 'C Pillar Baffle Plate R&R',   group: 'Body Panels', opcode: 'BODY-CPILLAR', laborHours: 0.8, laborTypeId: 'standard', parts: [], isDefault: false,
+          applications: [
+            { id: 'app-baffle', name: 'Baffle Plate Assembly' },
+          ] },
         { id: 'op-console',   name: 'Console R&R',                 group: 'Body Panels', opcode: 'BODY-CONSOLE', laborHours: 0.6, laborTypeId: 'standard', parts: [], isDefault: false },
-        { id: 'op-drhandle',  name: 'Door Handle R&R',              group: 'Body Panels', opcode: 'BODY-DRHANDLE', laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p1', name:'Door Handle', price:34.99, qty:1 }], isDefault: false },
+        { id: 'op-drhandle',  name: 'Door Handle R&R',              group: 'Body Panels', opcode: 'BODY-DRHANDLE', laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p1', name:'Door Handle', price:34.99, qty:1 }], isDefault: false,
+          applications: [
+            { id: 'app-ext', name: 'Exterior Door Handle', positions: [
+              { id: 'pos-fr', name: 'Front Right Door', qualifiers: [
+                { id: 'q-blk-us', name: 'Black paint (US)' },
+                { id: 'q-blk-jp', name: 'Black paint (Japan)' },
+                { id: 'q-red-us', name: 'Red paint (US)' },
+                { id: 'q-red-jp', name: 'Red paint (Japan)' },
+                { id: 'q-blu-us', name: 'Blue paint (US)' },
+                { id: 'q-blu-jp', name: 'Blue paint (Japan)' },
+              ]},
+              { id: 'pos-fl', name: 'Front Left Door', qualifiers: [
+                { id: 'q-blk-us', name: 'Black paint (US)' },
+                { id: 'q-blk-jp', name: 'Black paint (Japan)' },
+                { id: 'q-red-us', name: 'Red paint (US)' },
+                { id: 'q-red-jp', name: 'Red paint (Japan)' },
+              ]},
+              { id: 'pos-rr', name: 'Rear Right Door', qualifiers: [
+                { id: 'q-blk-us', name: 'Black paint (US)' },
+                { id: 'q-red-us', name: 'Red paint (US)' },
+              ]},
+              { id: 'pos-rl', name: 'Rear Left Door', qualifiers: [
+                { id: 'q-blk-us', name: 'Black paint (US)' },
+                { id: 'q-red-us', name: 'Red paint (US)' },
+              ]},
+            ]},
+            { id: 'app-gasket', name: 'Door Handle Gasket', positions: [
+              { id: 'pos-fr', name: 'Front Right Door', qualifiers: [
+                { id: 'q-blk-us', name: 'Black paint (US)' },
+                { id: 'q-red-us', name: 'Red paint (US)' },
+              ]},
+              { id: 'pos-fl', name: 'Front Left Door', qualifiers: [
+                { id: 'q-blk-us', name: 'Black paint (US)' },
+                { id: 'q-red-us', name: 'Red paint (US)' },
+              ]},
+            ]},
+          ] },
         { id: 'op-drlockact', name: 'Door Lock Actuator R&R',       group: 'Body Panels', opcode: 'BODY-DRLOCKACT', laborHours: 0.9, laborTypeId: 'standard', parts: [{ id:'p2', name:'Door Lock Actuator', price:49.99, qty:1 }], isDefault: false },
         { id: 'op-drlockcyl', name: 'Door Lock Cylinder R&R',       group: 'Body Panels', opcode: 'BODY-DRLOCKCYL', laborHours: 0.7, laborTypeId: 'standard', parts: [{ id:'p3', name:'Door Lock Cylinder', price:29.99, qty:1 }], isDefault: false },
         { id: 'op-drmirror',  name: 'Door Mirror R&R',              group: 'Body Panels', opcode: 'BODY-DRMIRROR', laborHours: 0.4, laborTypeId: 'standard', parts: [{ id:'p4', name:'Door Mirror', price:59.99, qty:1 }], isDefault: false },
@@ -60,7 +99,11 @@
     {
       id: 'brakes', name: 'Brakes',
       operations: [
-        { id: 'op-brk-f',     name: 'Brake Pad Replacement – Front',   group: 'Brake Pads',    opcode: 'BRK-PAD-F',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p5',  name:'Front Brake Pad Set',  price:64.99, qty:1 }], isDefault: false },
+        { id: 'op-brk-f',     name: 'Brake Pad Replacement – Front',   group: 'Brake Pads',    opcode: 'BRK-PAD-F',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p5',  name:'Front Brake Pad Set',  price:64.99, qty:1 }], isDefault: false,
+          applications: [
+            { id: 'app-oem',  name: 'OEM Pad Set' },
+            { id: 'app-perf', name: 'Performance Pad Set' },
+          ] },
         { id: 'op-brk-r',     name: 'Brake Pad Replacement – Rear',    group: 'Brake Pads',    opcode: 'BRK-PAD-R',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p6',  name:'Rear Brake Pad Set',   price:54.99, qty:1 }], isDefault: false },
         { id: 'op-rotor',     name: 'Brake Rotor Replacement – Front', group: 'Rotors',        opcode: 'BRK-ROTOR-F', laborHours: 2.0, laborTypeId: 'standard', parts: [{ id:'p7',  name:'Front Rotor (ea)',     price:79.99, qty:2 }], isDefault: false },
         { id: 'op-brk-flush', name: 'Brake Fluid Flush',               group: 'Brake Fluid',   opcode: 'BRK-FLUSH',   laborHours: 0.8, laborTypeId: 'standard', parts: [{ id:'p8',  name:'DOT 3 Brake Fluid',    price:14.99, qty:1 }], isDefault: false },
@@ -100,7 +143,17 @@
     {
       id: 'suspension', name: 'Suspension',
       operations: [
-        { id: 'op-strut',  name: 'Front Strut Assembly R&R', group: 'Struts & Shocks', opcode: 'SUS-STRUT-F', laborHours: 1.8, laborTypeId: 'standard', parts: [{ id:'p22', name:'Front Strut Assembly', price:129.99, qty:2 }], isDefault: false },
+        { id: 'op-strut',  name: 'Front Strut Assembly R&R', group: 'Struts & Shocks', opcode: 'SUS-STRUT-F', laborHours: 1.8, laborTypeId: 'standard', parts: [{ id:'p22', name:'Front Strut Assembly', price:129.99, qty:2 }], isDefault: false,
+          applications: [
+            { id: 'app-strut-assy', name: 'Complete Strut Assembly', positions: [
+              { id: 'pos-fl', name: 'Front Left' },
+              { id: 'pos-fr', name: 'Front Right' },
+            ]},
+            { id: 'app-mount', name: 'Strut Mount Only', positions: [
+              { id: 'pos-fl', name: 'Front Left' },
+              { id: 'pos-fr', name: 'Front Right' },
+            ]},
+          ] },
         { id: 'op-cabush', name: 'Control Arm Bushing R&R',  group: 'Control Arms',    opcode: 'SUS-CABUSH',  laborHours: 1.2, laborTypeId: 'standard', parts: [{ id:'p23', name:'Control Arm Bushing', price:19.99, qty:2 }], isDefault: false },
       ],
     },
@@ -143,6 +196,13 @@
     const laborCost  = r2(laborHours * laborRate);
     const partsCost  = r2(op.parts.reduce((s, p) => s + p.price * p.qty, 0));
     return { ltId, laborHours, laborRate, laborCost, partsCost, parts: op.parts, total: r2(laborCost + partsCost) };
+  }
+
+  function fetchLevel(data, delay) {
+    if (delay === undefined) delay = 400;
+    return new Promise((res, rej) => {
+      setTimeout(() => (data ? res(data) : rej(new Error('No data returned'))), delay);
+    });
   }
 
   // ─── Styles ───────────────────────────────────────────────────────────────────
