@@ -526,7 +526,8 @@
           <input class="spgw-search" type="text" placeholder="Search by name, category, or opcode…" autocomplete="off" />
         </div>
         <div class="spgw-tree"></div>
-        ${this._footerHTML()}`;
+        <div class="spgw-wizard-wrap" style="display:none"></div>
+        ${this._c.multiSelect ? this._footerHTML() : ''}`;
       return el;
     }
 
@@ -551,7 +552,7 @@
             </div>
             <div class="spgw-modal-right">${this._rightPanelHTML(null)}</div>
           </div>
-          ${this._footerHTML()}
+          ${this._c.multiSelect ? this._footerHTML() : ''}
         </div>`;
       return el;
     }
@@ -625,7 +626,7 @@
           if (this._c.mode === 'modal') {
             // Modal: focus shows pricing panel, separate from selection
             this._s.focusedOp = op;
-            this._updateRightPanel(op);
+            this._renderModalRight();
             this._updateTree();
           } else {
             // Compact: click row = expand pricing inline
@@ -683,7 +684,7 @@
           if (!op) return;
           const isSelected = this._s.selectedOps.some(s => s.op.id === op.id);
           isSelected ? this._deselectOp(op.id) : this._selectOp(op);
-          this._updateRightPanel(op);
+          this._renderModalRight();
         });
       }
 
@@ -837,9 +838,37 @@
         </div>`;
     }
 
-    _updateRightPanel(op) {
+    _renderModalRight() {
       const right = this._root.querySelector('.spgw-modal-right');
-      if (right) right.innerHTML = this._rightPanelHTML(op);
+      if (!right) return;
+      if (!this._c.multiSelect && this._s.wizard.opId) {
+        right.innerHTML = this._wizardShellHTML();
+      } else if (this._c.multiSelect) {
+        right.innerHTML = this._rightPanelHTML(this._s.focusedOp);
+      } else {
+        right.innerHTML = this._rightPanelHTML(null);
+      }
+    }
+
+    _render() {
+      this._updateTree();
+      if (this._c.mode === 'modal') this._renderModalRight();
+      else this._renderCompactBody();
+    }
+
+    _renderCompactBody() {
+      const searchWrap = this._root.querySelector('.spgw-search-wrap');
+      const treeEl      = this._root.querySelector('.spgw-tree');
+      const wizardWrap  = this._root.querySelector('.spgw-wizard-wrap');
+      const footer       = this._root.querySelector('.spgw-footer');
+      const showWizard  = !this._c.multiSelect && !!this._s.wizard.opId;
+      if (searchWrap) searchWrap.style.display = showWizard ? 'none' : '';
+      if (treeEl)      treeEl.style.display     = showWizard ? 'none' : '';
+      if (footer)       footer.style.display     = this._c.multiSelect ? '' : 'none';
+      if (wizardWrap) {
+        wizardWrap.style.display = showWizard ? '' : 'none';
+        if (showWizard) wizardWrap.innerHTML = this._wizardShellHTML();
+      }
     }
 
     // ── Wizard rendering ───────────────────────────────────────────────────────
@@ -939,7 +968,7 @@
       this._updateFooter();
       this._updateTree();
       if (this._c.mode === 'modal' && this._s.focusedOp?.id === opId) {
-        this._updateRightPanel(this._s.focusedOp);
+        this._renderModalRight();
       }
       this._emitChange();
     }
@@ -963,7 +992,7 @@
       if (this._c.mode !== 'modal' && this._s.expandedOp === opId) {
         this._updateTree();
       } else if (this._c.mode === 'modal' && this._s.focusedOp?.id === opId) {
-        this._updateRightPanel(this._s.focusedOp);
+        this._renderModalRight();
       }
     }
 
@@ -1150,6 +1179,7 @@
     // ── Footer ─────────────────────────────────────────────────────────────────
 
     _updateFooter() {
+      if (!this._c.multiSelect) return;
       const footer  = this._root.querySelector('.spgw-footer');
       const left    = footer.querySelector('.spgw-footer-left');
       const right   = footer.querySelector('.spgw-footer-right');
