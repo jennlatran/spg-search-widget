@@ -634,7 +634,8 @@
             this._updateTree();
           }
         } else {
-          if (this._isOpActive(opId)) this._wizardCancel();
+          if (this._s.wizard.opId === opId) this._wizardCancel();
+          else if (this._isOpActive(opId)) this._editWizard(op);
           else this._startWizard(op);
         }
       });
@@ -1041,6 +1042,25 @@
       this._s.wizard = this._resetWizard();
       this._s.wizard.opId = op.id;
       this._wizardResolveApplications(op);
+    }
+
+    _editWizard(op) {
+      const entry = this._s.selectedOps.find(s => s.op.id === op.id);
+      const w = this._resetWizard();
+      w.opId = op.id;
+      if (entry?.wizard) {
+        w.application = entry.wizard.application || null;
+        w.position    = entry.wizard.position    || null;
+        w.qualifier   = entry.wizard.qualifier    || null;
+      }
+      w.applications = op.applications || [];
+      w.positions    = w.application?.positions || [];
+      w.qualifiers   = w.position?.qualifiers    || [];
+      w.laborTypeId  = entry?.pricing?.ltId ?? null;
+      w.laborHours   = entry?.pricing?.laborHours ?? null;
+      w.step = 'labor';
+      this._s.wizard = w;
+      this._render();
     }
 
     _wizardCancel() {
