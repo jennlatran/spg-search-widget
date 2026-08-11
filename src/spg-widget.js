@@ -715,7 +715,7 @@
         if (e.target.dataset.wizField === 'laborType') { this._wizardSetLabor('laborType', e.target.value); this._render(); }
       });
       root.addEventListener('input', e => {
-        if (e.target.dataset.wizField === 'laborHours') this._wizardSetLabor('laborHours', e.target.value);
+        if (e.target.dataset.wizField === 'laborHours') { this._wizardSetLabor('laborHours', e.target.value); this._render(); }
       });
     }
 
