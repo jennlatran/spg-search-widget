@@ -1021,7 +1021,7 @@
 
     _resetWizard() {
       return {
-        opId: null, step: null, loading: false, error: null,
+        opId: null, step: null, loading: false, error: null, token: 0,
         applications: [], application: null,
         positions: [],    position:    null,
         qualifiers: [],   qualifier:   null,
@@ -1059,8 +1059,9 @@
       this._s.wizard.error = null;
       this._render();
       const wizard = this._s.wizard;
+      const token = ++wizard.token;
       fetchLevel(op.applications || []).then(applications => {
-        if (this._s.wizard !== wizard) return;
+        if (this._s.wizard !== wizard || wizard.token !== token) return;
         this._s.wizard.applications = applications;
         this._s.wizard.loading = false;
         if (applications.length === 0) { this._wizardGoToLabor(op); return; }
@@ -1068,7 +1069,7 @@
         this._s.wizard.step = 'application';
         this._render();
       }).catch(err => {
-        if (this._s.wizard !== wizard) return;
+        if (this._s.wizard !== wizard || wizard.token !== token) return;
         this._s.wizard.loading = false;
         this._s.wizard.error = { step: 'application', message: err.message };
         this._render();
@@ -1091,8 +1092,9 @@
       this._s.wizard.error = null;
       this._render();
       const wizard = this._s.wizard;
+      const token = ++wizard.token;
       fetchLevel(application.positions || []).then(positions => {
-        if (this._s.wizard !== wizard) return;
+        if (this._s.wizard !== wizard || wizard.token !== token) return;
         this._s.wizard.positions = positions;
         this._s.wizard.loading = false;
         if (positions.length === 0) { this._wizardGoToLabor(op); return; }
@@ -1100,7 +1102,7 @@
         this._s.wizard.step = 'position';
         this._render();
       }).catch(err => {
-        if (this._s.wizard !== wizard) return;
+        if (this._s.wizard !== wizard || wizard.token !== token) return;
         this._s.wizard.loading = false;
         this._s.wizard.error = { step: 'position', message: err.message };
         this._render();
@@ -1120,8 +1122,9 @@
       this._s.wizard.error = null;
       this._render();
       const wizard = this._s.wizard;
+      const token = ++wizard.token;
       fetchLevel(position.qualifiers || []).then(qualifiers => {
-        if (this._s.wizard !== wizard) return;
+        if (this._s.wizard !== wizard || wizard.token !== token) return;
         this._s.wizard.qualifiers = qualifiers;
         this._s.wizard.loading = false;
         if (qualifiers.length === 0) { this._wizardGoToLabor(op); return; }
@@ -1129,7 +1132,7 @@
         this._s.wizard.step = 'qualifier';
         this._render();
       }).catch(err => {
-        if (this._s.wizard !== wizard) return;
+        if (this._s.wizard !== wizard || wizard.token !== token) return;
         this._s.wizard.loading = false;
         this._s.wizard.error = { step: 'qualifier', message: err.message };
         this._render();
@@ -1143,6 +1146,7 @@
     }
 
     _wizardBack() {
+      this._s.wizard.token++;
       const w = this._s.wizard;
       if (w.step === 'labor') {
         w.step = w.qualifiers.length ? 'qualifier'
