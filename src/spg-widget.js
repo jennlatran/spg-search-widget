@@ -915,7 +915,9 @@
       this._s.wizard.loading = true;
       this._s.wizard.error = null;
       this._render();
+      const wizard = this._s.wizard;
       fetchLevel(op.applications || []).then(applications => {
+        if (this._s.wizard !== wizard) return;
         this._s.wizard.applications = applications;
         this._s.wizard.loading = false;
         if (applications.length === 0) { this._wizardGoToLabor(op); return; }
@@ -923,6 +925,7 @@
         this._s.wizard.step = 'application';
         this._render();
       }).catch(err => {
+        if (this._s.wizard !== wizard) return;
         this._s.wizard.loading = false;
         this._s.wizard.error = { step: 'application', message: err.message };
         this._render();
@@ -944,7 +947,9 @@
       this._s.wizard.loading = true;
       this._s.wizard.error = null;
       this._render();
+      const wizard = this._s.wizard;
       fetchLevel(application.positions || []).then(positions => {
+        if (this._s.wizard !== wizard) return;
         this._s.wizard.positions = positions;
         this._s.wizard.loading = false;
         if (positions.length === 0) { this._wizardGoToLabor(op); return; }
@@ -952,6 +957,7 @@
         this._s.wizard.step = 'position';
         this._render();
       }).catch(err => {
+        if (this._s.wizard !== wizard) return;
         this._s.wizard.loading = false;
         this._s.wizard.error = { step: 'position', message: err.message };
         this._render();
@@ -970,7 +976,9 @@
       this._s.wizard.loading = true;
       this._s.wizard.error = null;
       this._render();
+      const wizard = this._s.wizard;
       fetchLevel(position.qualifiers || []).then(qualifiers => {
+        if (this._s.wizard !== wizard) return;
         this._s.wizard.qualifiers = qualifiers;
         this._s.wizard.loading = false;
         if (qualifiers.length === 0) { this._wizardGoToLabor(op); return; }
@@ -978,6 +986,7 @@
         this._s.wizard.step = 'qualifier';
         this._render();
       }).catch(err => {
+        if (this._s.wizard !== wizard) return;
         this._s.wizard.loading = false;
         this._s.wizard.error = { step: 'qualifier', message: err.message };
         this._render();
