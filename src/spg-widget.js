@@ -596,7 +596,7 @@
         this._updateTree();
       });
 
-      // Tree: category toggle, op row click, checkbox
+      // Tree: category toggle, expand toggle (multiSelect), op row click
       root.querySelector('.spgw-tree').addEventListener('click', e => {
         // Category header
         const catHdr = e.target.closest('.spgw-cat-hdr');
@@ -607,7 +607,7 @@
           return;
         }
 
-        // Expand toggle (compact mode)
+        // Expand toggle (compact mode, multiSelect only)
         const toggleBtn = e.target.closest('.spgw-op-toggle');
         if (toggleBtn) {
           const opId = toggleBtn.dataset.opToggle;
@@ -616,44 +616,35 @@
           return;
         }
 
-        // Operation row click (not checkbox, not toggle)
+        // Operation row click (includes clicking the checkbox/radio itself)
         const opRow = e.target.closest('.spgw-op-row');
-        if (opRow && !e.target.classList.contains('spgw-chk') && !e.target.closest('.spgw-op-toggle')) {
-          const opId = opRow.dataset.opRow;
-          const op = getOp(opId);
-          if (!op) return;
+        if (!opRow) return;
+        const opId = opRow.dataset.opRow;
+        const op = getOp(opId);
+        if (!op) return;
 
+        if (this._c.multiSelect) {
+          if (e.target.classList.contains('spgw-chk')) return; // handled by 'change' below
           if (this._c.mode === 'modal') {
-            // Modal: focus shows pricing panel, separate from selection
             this._s.focusedOp = op;
             this._renderModalRight();
             this._updateTree();
           } else {
-            // Compact: click row = expand pricing inline
             this._s.expandedOp = this._s.expandedOp === opId ? null : opId;
             this._updateTree();
           }
+        } else {
+          if (this._isOpActive(opId)) this._wizardCancel();
+          else this._startWizard(op);
         }
       });
 
-      // Checkbox toggle
+      // Checkbox toggle (multiSelect only — single-select uses the click handler above)
       root.querySelector('.spgw-tree').addEventListener('change', e => {
-        if (!e.target.classList.contains('spgw-chk')) return;
+        if (!this._c.multiSelect || !e.target.classList.contains('spgw-chk')) return;
         const op = getOp(e.target.dataset.op);
         if (!op) return;
         e.target.checked ? this._selectOp(op) : this._deselectOp(op.id);
-      });
-
-      // Radio click on an already-selected op: unselect it (native radios can't be
-      // unchecked by clicking again, and no 'change' event fires in that case)
-      root.querySelector('.spgw-tree').addEventListener('click', e => {
-        const chk = e.target.closest('.spgw-chk');
-        if (!chk || this._c.multiSelect || chk.type !== 'radio') return;
-        const opId = chk.dataset.op;
-        if (this._s.selectedOps.some(s => s.op.id === opId)) {
-          chk.checked = false;
-          this._deselectOp(opId);
-        }
       });
 
       // Compact pricing inputs (delegated from tree)
@@ -704,6 +695,28 @@
           if (this._c.mode !== 'inline') this.close();
         });
       }
+
+      // Wizard actions (delegated from root — shell renders in wizard-wrap or modal-right)
+      root.addEventListener('click', e => {
+        const actionBtn = e.target.closest('[data-wiz-action]');
+        if (!actionBtn) return;
+        const action = actionBtn.dataset.wizAction;
+        if (action === 'back')   { this._wizardBack(); return; }
+        if (action === 'cancel') { this._wizardCancel(); return; }
+        if (action === 'retry')  { this._wizardRetry(); return; }
+        if (action === 'apply')  { this._wizardConfirm(); return; }
+        const id = actionBtn.dataset.wizId;
+        if (action === 'select-application') { const a = this._s.wizard.applications.find(x => x.id === id); if (a) this._wizardSelectApplication(a); }
+        if (action === 'select-position')    { const p = this._s.wizard.positions.find(x => x.id === id);    if (p) this._wizardSelectPosition(p); }
+        if (action === 'select-qualifier')   { const q = this._s.wizard.qualifiers.find(x => x.id === id);   if (q) this._wizardSelectQualifier(q); }
+      });
+
+      root.addEventListener('change', e => {
+        if (e.target.dataset.wizField === 'laborType') { this._wizardSetLabor('laborType', e.target.value); this._render(); }
+      });
+      root.addEventListener('input', e => {
+        if (e.target.dataset.wizField === 'laborHours') this._wizardSetLabor('laborHours', e.target.value);
+      });
     }
 
     // ── Tree rendering ─────────────────────────────────────────────────────────
@@ -745,22 +758,23 @@
     }
 
     _opRowHTML(op) {
-      const selected = this._s.selectedOps.some(s => s.op.id === op.id);
-      const focused  = this._c.mode === 'modal' && this._s.focusedOp?.id === op.id;
-      const expanded = this._c.mode !== 'modal' && this._s.expandedOp === op.id;
+      const active  = this._isOpActive(op.id);
+      const focused = this._c.mode === 'modal' && this._c.multiSelect && this._s.focusedOp?.id === op.id;
+      const wizardFocused = this._c.mode === 'modal' && !this._c.multiSelect && this._s.wizard.opId === op.id;
+      const expanded = this._c.multiSelect && this._c.mode !== 'modal' && this._s.expandedOp === op.id;
       const ov = this._s.overrides[op.id] || {};
       const p  = calcPricing(op, ov);
 
       return `
-        <div class="spgw-op ${selected ? 'is-selected' : ''} ${focused ? 'is-focused' : ''} ${expanded ? 'is-expanded' : ''}">
+        <div class="spgw-op ${active ? 'is-selected' : ''} ${(focused || wizardFocused) ? 'is-focused' : ''} ${expanded ? 'is-expanded' : ''}">
           <div class="spgw-op-row" data-op-row="${op.id}">
-            <input type="${this._c.multiSelect ? 'checkbox' : 'radio'}" name="spgw-op-radio-${this._uid}" class="spgw-chk" data-op="${op.id}" ${selected ? 'checked' : ''} />
+            <input type="${this._c.multiSelect ? 'checkbox' : 'radio'}" name="spgw-op-radio-${this._uid}" class="spgw-chk" data-op="${op.id}" ${active ? 'checked' : ''} />
             <div class="spgw-op-info">
               <span class="spgw-op-name">${esc(op.name)}</span>
               <span class="spgw-op-sub">${esc(op.group || '')}</span>
             </div>
             <span class="spgw-op-price">${fmt$(p.total)}</span>
-            ${this._c.mode !== 'modal'
+            ${this._c.multiSelect && this._c.mode !== 'modal'
               ? `<button class="spgw-op-toggle" data-op-toggle="${op.id}">${expanded ? '▲' : '▼'}</button>`
               : ''}
           </div>
