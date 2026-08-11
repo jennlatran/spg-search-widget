@@ -47,51 +47,68 @@
 
   const CATEGORIES = [
     {
-      id: 'oil-fluids', name: 'Oil & Fluids',
+      id: 'body-frame', name: 'Body & Frame',
       operations: [
-        { id: 'op-oil-conv',  name: 'Oil Change – Conventional',      opcode: 'OC-CONV',     laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p1', name:'Oil Filter',                price: 8.99, qty:1 }, { id:'p2', name:'Conv. Oil 5W-30 (5qt)', price:24.99, qty:1 }], isDefault: false },
-        { id: 'op-oil-synth', name: 'Oil Change – Full Synthetic',     opcode: 'OC-SYNTH',    laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p3', name:'Oil Filter',                price:12.99, qty:1 }, { id:'p4', name:'Full Syn. Oil 5W-30 (5qt)', price:49.99, qty:1 }], isDefault: false },
-        { id: 'op-coolant',   name: 'Coolant System Flush',            opcode: 'COOL-FLUSH',  laborHours: 1.0, laborTypeId: 'standard', parts: [{ id:'p5', name:'Coolant (1 gal)',            price:22.99, qty:2 }], isDefault: false },
-        { id: 'op-trans',     name: 'Transmission Fluid Service',      opcode: 'TRANS-FLUID', laborHours: 1.5, laborTypeId: 'premium',  parts: [{ id:'p6', name:'ATF Fluid (1qt)',            price:18.99, qty:4 }], isDefault: false },
+        { id: 'op-cpillar',   name: 'C Pillar Baffle Plate R&R',   group: 'Body Panels', opcode: 'BODY-CPILLAR', laborHours: 0.8, laborTypeId: 'standard', parts: [], isDefault: false },
+        { id: 'op-console',   name: 'Console R&R',                 group: 'Body Panels', opcode: 'BODY-CONSOLE', laborHours: 0.6, laborTypeId: 'standard', parts: [], isDefault: false },
+        { id: 'op-drhandle',  name: 'Door Handle R&R',              group: 'Body Panels', opcode: 'BODY-DRHANDLE', laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p1', name:'Door Handle', price:34.99, qty:1 }], isDefault: false },
+        { id: 'op-drlockact', name: 'Door Lock Actuator R&R',       group: 'Body Panels', opcode: 'BODY-DRLOCKACT', laborHours: 0.9, laborTypeId: 'standard', parts: [{ id:'p2', name:'Door Lock Actuator', price:49.99, qty:1 }], isDefault: false },
+        { id: 'op-drlockcyl', name: 'Door Lock Cylinder R&R',       group: 'Body Panels', opcode: 'BODY-DRLOCKCYL', laborHours: 0.7, laborTypeId: 'standard', parts: [{ id:'p3', name:'Door Lock Cylinder', price:29.99, qty:1 }], isDefault: false },
+        { id: 'op-drmirror',  name: 'Door Mirror R&R',              group: 'Body Panels', opcode: 'BODY-DRMIRROR', laborHours: 0.4, laborTypeId: 'standard', parts: [{ id:'p4', name:'Door Mirror', price:59.99, qty:1 }], isDefault: false },
       ],
     },
     {
       id: 'brakes', name: 'Brakes',
       operations: [
-        { id: 'op-brk-f',     name: 'Brake Pad Replacement – Front',  opcode: 'BRK-PAD-F',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p7',  name:'Front Brake Pad Set',       price:64.99, qty:1 }], isDefault: false },
-        { id: 'op-brk-r',     name: 'Brake Pad Replacement – Rear',   opcode: 'BRK-PAD-R',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p8',  name:'Rear Brake Pad Set',        price:54.99, qty:1 }], isDefault: false },
-        { id: 'op-rotor',     name: 'Brake Rotor Replacement – Front', opcode: 'BRK-ROTOR-F', laborHours: 2.0, laborTypeId: 'standard', parts: [{ id:'p9',  name:'Front Rotor (ea)',          price:79.99, qty:2 }], isDefault: false },
-        { id: 'op-brk-flush', name: 'Brake Fluid Flush',              opcode: 'BRK-FLUSH',   laborHours: 0.8, laborTypeId: 'standard', parts: [{ id:'p10', name:'DOT 3 Brake Fluid',         price:14.99, qty:1 }], isDefault: false },
-      ],
-    },
-    {
-      id: 'tires', name: 'Tires & Wheels',
-      operations: [
-        { id: 'op-tire-rot',  name: 'Tire Rotation',                  opcode: 'TIRE-ROT',    laborHours: 0.5, laborTypeId: 'standard', parts: [], isDefault: true  },
-        { id: 'op-whl-bal',   name: 'Wheel Balance (4 wheels)',        opcode: 'WHEEL-BAL',   laborHours: 1.0, laborTypeId: 'standard', parts: [], isDefault: false },
-        { id: 'op-tire-inst', name: 'Tire Installation (per tire)',    opcode: 'TIRE-INST',   laborHours: 0.3, laborTypeId: 'standard', parts: [{ id:'p11', name:'Valve Stem',               price: 3.99, qty:1 }], isDefault: false },
-      ],
-    },
-    {
-      id: 'engine', name: 'Engine & Performance',
-      operations: [
-        { id: 'op-spark',   name: 'Spark Plug Replacement',           opcode: 'ENG-SPARK',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p12', name:'Iridium Spark Plug',        price:14.99, qty:4 }], isDefault: false },
-        { id: 'op-air-flt', name: 'Engine Air Filter Replacement',    opcode: 'ENG-AIR',     laborHours: 0.3, laborTypeId: 'standard', parts: [{ id:'p13', name:'Engine Air Filter',         price:24.99, qty:1 }], isDefault: false },
-        { id: 'op-fuel',    name: 'Fuel System Cleaning',             opcode: 'ENG-FUEL',    laborHours: 1.0, laborTypeId: 'premium',  parts: [{ id:'p14', name:'Fuel System Cleaner',      price:34.99, qty:1 }], isDefault: false },
+        { id: 'op-brk-f',     name: 'Brake Pad Replacement – Front',   group: 'Brake Pads',    opcode: 'BRK-PAD-F',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p5',  name:'Front Brake Pad Set',  price:64.99, qty:1 }], isDefault: false },
+        { id: 'op-brk-r',     name: 'Brake Pad Replacement – Rear',    group: 'Brake Pads',    opcode: 'BRK-PAD-R',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p6',  name:'Rear Brake Pad Set',   price:54.99, qty:1 }], isDefault: false },
+        { id: 'op-rotor',     name: 'Brake Rotor Replacement – Front', group: 'Rotors',        opcode: 'BRK-ROTOR-F', laborHours: 2.0, laborTypeId: 'standard', parts: [{ id:'p7',  name:'Front Rotor (ea)',     price:79.99, qty:2 }], isDefault: false },
+        { id: 'op-brk-flush', name: 'Brake Fluid Flush',               group: 'Brake Fluid',   opcode: 'BRK-FLUSH',   laborHours: 0.8, laborTypeId: 'standard', parts: [{ id:'p8',  name:'DOT 3 Brake Fluid',    price:14.99, qty:1 }], isDefault: false },
       ],
     },
     {
       id: 'electrical', name: 'Electrical',
       operations: [
-        { id: 'op-batt', name: 'Battery Replacement',                 opcode: 'ELEC-BATT',   laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p15', name:'Group 35 Battery',         price:139.99, qty:1 }], isDefault: false },
-        { id: 'op-alt',  name: 'Alternator Replacement',              opcode: 'ELEC-ALT',    laborHours: 2.5, laborTypeId: 'premium',  parts: [{ id:'p16', name:'Reman. Alternator',         price:229.99, qty:1 }], isDefault: false },
+        { id: 'op-batt', name: 'Battery Replacement',    group: 'Battery & Charging', opcode: 'ELEC-BATT', laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p9',  name:'Group 35 Battery', price:139.99, qty:1 }], isDefault: false },
+        { id: 'op-alt',  name: 'Alternator Replacement', group: 'Battery & Charging', opcode: 'ELEC-ALT',  laborHours: 2.5, laborTypeId: 'premium',  parts: [{ id:'p10', name:'Reman. Alternator', price:229.99, qty:1 }], isDefault: false },
+        { id: 'op-strtr', name: 'Starter Replacement',    group: 'Battery & Charging', opcode: 'ELEC-STRTR', laborHours: 1.8, laborTypeId: 'premium', parts: [{ id:'p11', name:'Starter Motor',    price:189.99, qty:1 }], isDefault: false },
       ],
     },
     {
       id: 'hvac', name: 'HVAC',
       operations: [
-        { id: 'op-ac',      name: 'A/C System Recharge',              opcode: 'HVAC-AC',     laborHours: 1.0, laborTypeId: 'standard', parts: [{ id:'p17', name:'R-134a Refrigerant',       price:49.99, qty:1 }], isDefault: false },
-        { id: 'op-cab-flt', name: 'Cabin Air Filter Replacement',     opcode: 'HVAC-CAB',    laborHours: 0.3, laborTypeId: 'standard', parts: [{ id:'p18', name:'Cabin Air Filter',         price:19.99, qty:1 }], isDefault: true  },
+        { id: 'op-ac',      name: 'A/C System Recharge',          group: 'Climate Control', opcode: 'HVAC-AC',  laborHours: 1.0, laborTypeId: 'standard', parts: [{ id:'p12', name:'R-134a Refrigerant', price:49.99, qty:1 }], isDefault: false },
+        { id: 'op-cab-flt', name: 'Cabin Air Filter Replacement', group: 'Climate Control', opcode: 'HVAC-CAB', laborHours: 0.3, laborTypeId: 'standard', parts: [{ id:'p13', name:'Cabin Air Filter',   price:19.99, qty:1 }], isDefault: true  },
+      ],
+    },
+    {
+      id: 'powertrain', name: 'Powertrain',
+      operations: [
+        { id: 'op-oil-conv',  name: 'Oil Change – Conventional',  group: 'Engine',       opcode: 'OC-CONV',     laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p14', name:'Oil Filter',            price: 8.99, qty:1 }, { id:'p15', name:'Conv. Oil 5W-30 (5qt)', price:24.99, qty:1 }], isDefault: false },
+        { id: 'op-oil-synth', name: 'Oil Change – Full Synthetic', group: 'Engine',       opcode: 'OC-SYNTH',    laborHours: 0.5, laborTypeId: 'standard', parts: [{ id:'p16', name:'Oil Filter',            price:12.99, qty:1 }, { id:'p17', name:'Full Syn. Oil 5W-30 (5qt)', price:49.99, qty:1 }], isDefault: false },
+        { id: 'op-spark',     name: 'Spark Plug Replacement',     group: 'Engine',       opcode: 'ENG-SPARK',   laborHours: 1.5, laborTypeId: 'standard', parts: [{ id:'p18', name:'Iridium Spark Plug',    price:14.99, qty:4 }], isDefault: false },
+        { id: 'op-trans',     name: 'Transmission Fluid Service',  group: 'Transmission', opcode: 'TRANS-FLUID', laborHours: 1.5, laborTypeId: 'premium',  parts: [{ id:'p19', name:'ATF Fluid (1qt)',       price:18.99, qty:4 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'steering', name: 'Steering',
+      operations: [
+        { id: 'op-tierod',  name: 'Outer Tie Rod End R&R',   group: 'Steering Linkage', opcode: 'STR-TIEROD', laborHours: 0.9, laborTypeId: 'standard', parts: [{ id:'p20', name:'Outer Tie Rod End', price:24.99, qty:2 }], isDefault: false },
+        { id: 'op-prack',   name: 'Power Steering Rack R&R', group: 'Steering Gear',    opcode: 'STR-RACK',   laborHours: 2.2, laborTypeId: 'premium',  parts: [{ id:'p21', name:'Steering Rack',     price:349.99, qty:1 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'suspension', name: 'Suspension',
+      operations: [
+        { id: 'op-strut',  name: 'Front Strut Assembly R&R', group: 'Struts & Shocks', opcode: 'SUS-STRUT-F', laborHours: 1.8, laborTypeId: 'standard', parts: [{ id:'p22', name:'Front Strut Assembly', price:129.99, qty:2 }], isDefault: false },
+        { id: 'op-cabush', name: 'Control Arm Bushing R&R',  group: 'Control Arms',    opcode: 'SUS-CABUSH',  laborHours: 1.2, laborTypeId: 'standard', parts: [{ id:'p23', name:'Control Arm Bushing', price:19.99, qty:2 }], isDefault: false },
+      ],
+    },
+    {
+      id: 'vehicle', name: 'Vehicle',
+      operations: [
+        { id: 'op-tire-rot', name: 'Tire Rotation',           group: 'General', opcode: 'TIRE-ROT',  laborHours: 0.5, laborTypeId: 'standard', parts: [], isDefault: true },
+        { id: 'op-whl-bal',  name: 'Wheel Balance (4 wheels)', group: 'General', opcode: 'WHEEL-BAL', laborHours: 1.0, laborTypeId: 'standard', parts: [], isDefault: false },
       ],
     },
   ];
@@ -101,6 +118,8 @@
   const r2   = n => Math.round(n * 100) / 100;
   const fmt$ = n => '$' + Number(n).toFixed(2);
   const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  let widgetUidCounter = 0;
 
   function resolve(ref) {
     if (!ref) return null;
@@ -224,7 +243,7 @@
 .spgw-chk{flex-shrink:0;accent-color:#2563eb;width:14px;height:14px;cursor:pointer}
 .spgw-op-info{flex:1;min-width:0}
 .spgw-op-name{display:block;font-size:13px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.spgw-op-code{display:block;font-size:11px;color:#94a3b8;font-family:monospace}
+.spgw-op-sub{display:block;font-size:12px;color:#94a3b8}
 .spgw-op-price{font-size:12px;font-weight:600;color:#059669;flex-shrink:0}
 .spgw-op-toggle{
   background:none;border:1px solid #e2e8f0;cursor:pointer;
@@ -239,19 +258,13 @@
   padding:0 10px 10px 22px;
   border-top:1px solid #f1f5f9;background:#f8fafc;
 }
-.spgw-cprc{padding:10px;background:#fff;border-radius:7px;border:1px solid #e2e8f0}
-.spgw-cprc-labor{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-.spgw-cprc-sel{font-size:12px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:5px;outline:none;background:#fff;color:#374151;flex-shrink:0}
+.spgw-cprc{padding:10px;background:#fff;border-radius:7px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.spgw-cprc-field{display:flex;align-items:center;gap:8px}
+.spgw-cprc-sel{font-size:12px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:5px;outline:none;background:#fff;color:#374151}
 .spgw-cprc-sel:focus{border-color:#3b82f6}
-.spgw-cprc-inp{font-size:12px;padding:4px 5px;border:1px solid #e2e8f0;border-radius:5px;outline:none;background:#fff;color:#374151;width:56px;text-align:right}
+.spgw-cprc-inp{font-size:12px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:5px;outline:none;background:#fff;color:#374151;width:70px;text-align:right}
 .spgw-cprc-inp:focus{border-color:#3b82f6}
-.spgw-cprc-lbl{font-size:12px;color:#6b7280;white-space:nowrap}
-.spgw-cprc-parts{display:flex;flex-direction:column;gap:3px;margin-bottom:7px;padding-top:6px;border-top:1px solid #f1f5f9}
-.spgw-cprc-part{display:flex;justify-content:space-between;font-size:12px;color:#374151}
-.spgw-cprc-part span:last-child{color:#059669;font-weight:500}
-.spgw-cprc-total{display:flex;gap:12px;justify-content:flex-end;font-size:12px;padding-top:6px;border-top:1px solid #f1f5f9}
-.spgw-cprc-total span{color:#6b7280}
-.spgw-cprc-total strong{color:#059669;font-size:13px}
+.spgw-cprc-lbl{font-size:12px;font-weight:600;color:#374151;white-space:nowrap}
 
 /* ── Modal right panel pricing ── */
 .spgw-rp{padding:18px}
@@ -313,12 +326,13 @@
 
   class SPGWidgetCore {
     constructor(config) {
+      this._uid = ++widgetUidCounter;
       this._c = {
         mode:           config.mode || (config.trigger ? 'popover' : 'inline'),
         container:      resolve(config.container),
         trigger:        resolve(config.trigger),
         vehicleContext: config.vehicleContext || {},
-        multiSelect:    config.multiSelect !== false,
+        multiSelect:    config.multiSelect === true,
         onConfirm:      config.onConfirm  || null,
         onChange:       config.onChange   || null,
       };
@@ -459,7 +473,7 @@
       return `<div class="spgw-footer">
         <div class="spgw-footer-left"><span class="spgw-no-sel">No services selected</span></div>
         <div class="spgw-footer-right">
-          <button class="spgw-confirm-btn" disabled>Confirm →</button>
+          <button class="spgw-confirm-btn" disabled>Apply</button>
         </div>
       </div>`;
     }
@@ -540,6 +554,18 @@
         const op = getOp(e.target.dataset.op);
         if (!op) return;
         e.target.checked ? this._selectOp(op) : this._deselectOp(op.id);
+      });
+
+      // Radio click on an already-selected op: unselect it (native radios can't be
+      // unchecked by clicking again, and no 'change' event fires in that case)
+      root.querySelector('.spgw-tree').addEventListener('click', e => {
+        const chk = e.target.closest('.spgw-chk');
+        if (!chk || this._c.multiSelect || chk.type !== 'radio') return;
+        const opId = chk.dataset.op;
+        if (this._s.selectedOps.some(s => s.op.id === opId)) {
+          chk.checked = false;
+          this._deselectOp(opId);
+        }
       });
 
       // Compact pricing inputs (delegated from tree)
@@ -638,41 +664,33 @@
       return `
         <div class="spgw-op ${selected ? 'is-selected' : ''} ${focused ? 'is-focused' : ''} ${expanded ? 'is-expanded' : ''}">
           <div class="spgw-op-row" data-op-row="${op.id}">
-            ${this._c.multiSelect ? `<input type="checkbox" class="spgw-chk" data-op="${op.id}" ${selected ? 'checked' : ''} />` : ''}
+            <input type="${this._c.multiSelect ? 'checkbox' : 'radio'}" name="spgw-op-radio-${this._uid}" class="spgw-chk" data-op="${op.id}" ${selected ? 'checked' : ''} />
             <div class="spgw-op-info">
               <span class="spgw-op-name">${esc(op.name)}</span>
-              <span class="spgw-op-code">${esc(op.opcode)}</span>
+              <span class="spgw-op-sub">${esc(op.group || '')}</span>
             </div>
             <span class="spgw-op-price">${fmt$(p.total)}</span>
             ${this._c.mode !== 'modal'
               ? `<button class="spgw-op-toggle" data-op-toggle="${op.id}">${expanded ? '▲' : '▼'}</button>`
               : ''}
           </div>
-          ${expanded ? this._compactPricingHTML(op, ov, p) : ''}
+          ${expanded ? this._compactPricingHTML(op, p) : ''}
         </div>`;
     }
 
-    _compactPricingHTML(op, ov, p) {
+    _compactPricingHTML(op, p) {
       return `
         <div class="spgw-op-detail">
           <div class="spgw-cprc">
-            <div class="spgw-cprc-labor">
+            <div class="spgw-cprc-field">
+              <span class="spgw-cprc-lbl">Labor Type</span>
               <select class="spgw-cprc-sel" data-op="${op.id}" data-field="laborType">
                 ${LABOR_TYPES.map(lt => `<option value="${lt.id}" ${lt.id === p.ltId ? 'selected' : ''}>${esc(lt.name)}</option>`).join('')}
               </select>
-              <input class="spgw-cprc-inp" type="number" step="0.1" min="0" value="${p.laborHours}" data-op="${op.id}" data-field="laborHours" />
-              <span class="spgw-cprc-lbl">hrs ×</span>
-              <input class="spgw-cprc-inp" type="number" step="1" min="0" value="${p.laborRate}" data-op="${op.id}" data-field="laborRate" />
-              <span class="spgw-cprc-lbl">/hr = ${fmt$(p.laborCost)}</span>
             </div>
-            ${p.parts.length ? `
-              <div class="spgw-cprc-parts">
-                ${p.parts.map(pt => `<div class="spgw-cprc-part"><span>${esc(pt.name)} × ${pt.qty}</span><span>${fmt$(pt.price * pt.qty)}</span></div>`).join('')}
-              </div>` : ''}
-            <div class="spgw-cprc-total">
-              <span>Labor ${fmt$(p.laborCost)}</span>
-              ${p.parts.length ? `<span>Parts ${fmt$(p.partsCost)}</span>` : ''}
-              <strong>Total ${fmt$(p.total)}</strong>
+            <div class="spgw-cprc-field">
+              <span class="spgw-cprc-lbl">Labor Hours</span>
+              <input class="spgw-cprc-inp" type="number" step="0.1" min="0" value="${p.laborHours}" data-op="${op.id}" data-field="laborHours" />
             </div>
           </div>
         </div>`;
@@ -741,11 +759,15 @@
 
     _selectOp(op) {
       const pricing = calcPricing(op, this._s.overrides[op.id]);
-      const idx = this._s.selectedOps.findIndex(s => s.op.id === op.id);
-      if (idx >= 0) {
-        this._s.selectedOps[idx] = { op, pricing };
+      if (!this._c.multiSelect) {
+        this._s.selectedOps = [{ op, pricing }];
       } else {
-        this._s.selectedOps.push({ op, pricing });
+        const idx = this._s.selectedOps.findIndex(s => s.op.id === op.id);
+        if (idx >= 0) {
+          this._s.selectedOps[idx] = { op, pricing };
+        } else {
+          this._s.selectedOps.push({ op, pricing });
+        }
       }
       this._updateFooter();
       this._updateTree();
@@ -804,9 +826,7 @@
 
       right.innerHTML = `
         ${ops.length ? `<span class="spgw-total">${fmt$(total)}</span>` : ''}
-        <button class="spgw-confirm-btn" ${ops.length === 0 ? 'disabled' : ''}>
-          Confirm${ops.length ? ` (${ops.length})` : ''} →
-        </button>`;
+        <button class="spgw-confirm-btn" ${ops.length === 0 ? 'disabled' : ''}>Apply</button>`;
 
       // Re-bind confirm button
       right.querySelector('.spgw-confirm-btn').addEventListener('click', () => {
@@ -881,7 +901,7 @@
      * @param {string|Element} [config.container]  - for inline mode
      * @param {string|Element} [config.trigger]    - element that opens the widget
      * @param {object}  [config.vehicleContext]    - { year, make, model, trim, engine }
-     * @param {boolean} [config.multiSelect=true]
+     * @param {boolean} [config.multiSelect=false]
      * @param {function} [config.onConfirm]        - called with operations[] on confirm
      * @param {function} [config.onChange]         - called on every selection change
      */

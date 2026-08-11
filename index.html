@@ -54,9 +54,6 @@
     .host-modal-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
     .host-modal-btn:hover { background: #1d4ed8; }
     .host-form-note { font-size: 12px; color: #94a3b8; font-style: italic; }
-    .host-result { margin-top: 12px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #166534; display: none; }
-    .host-result.visible { display: block; }
-    .host-result strong { display: block; margin-bottom: 3px; font-size: 13px; }
 
     /* ── Output panel ── */
     .out-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; position: sticky; top: 80px; }
@@ -140,10 +137,6 @@
                      style="cursor:pointer" />
               <p class="host-form-note" style="margin-top:5px">Click the field above to open the SPG widget</p>
             </div>
-            <div class="host-result" id="popover-result">
-              <strong>Services added to appointment:</strong>
-              <span id="popover-result-text"></span>
-            </div>
           </div>
         </div>
 
@@ -202,10 +195,6 @@ SPGWidget.<span class="fn">attach</span>(<span class="str">'#service-search-inpu
             <button class="host-modal-btn" id="modal-trigger">
               ＋ Add Service Operations
             </button>
-          </div>
-          <div class="host-result" id="modal-result">
-            <strong>Selected operations:</strong>
-            <span id="modal-result-text"></span>
           </div>
         </div>
       </div>
@@ -288,13 +277,11 @@ SPGWidget.<span class="fn">attach</span>(<span class="str">'#service-search-inpu
       vehicleContext: { year: 2022, make: 'Toyota', model: 'Camry', trim: 'XSE', engine: '2.5L' },
       onConfirm(operations) {
         showOut('popover', operations);
-        // Update the host input value with a summary
+        // Show the selection directly in the host field
         const input = document.getElementById('popover-trigger');
-        input.value = operations.map(o => o.operationName).join(', ');
-        const result = document.getElementById('popover-result');
-        const text   = document.getElementById('popover-result-text');
-        result.classList.add('visible');
-        text.textContent = operations.map(o => `${o.operationName} (${('$' + o.totalPrice.toFixed(2))})`).join(' · ');
+        input.value = operations.length
+          ? operations.map(o => `${o.operationName} (${('$' + o.totalPrice.toFixed(2))})`).join(', ')
+          : '';
       },
     });
 
@@ -305,10 +292,11 @@ SPGWidget.<span class="fn">attach</span>(<span class="str">'#service-search-inpu
       vehicleContext: { year: 2021, make: 'Ford', model: 'F-150', trim: 'XLT', engine: '3.5L EcoBoost' },
       onConfirm(operations) {
         showOut('modal', operations);
-        const result = document.getElementById('modal-result');
-        const text   = document.getElementById('modal-result-text');
-        result.classList.add('visible');
-        text.textContent = operations.map(o => `${o.operationName} (${('$' + o.totalPrice.toFixed(2))})`).join(' · ');
+        // Show the selection directly in the trigger button
+        const btn = document.getElementById('modal-trigger');
+        btn.textContent = operations.length
+          ? operations.map(o => `${o.operationName} (${('$' + o.totalPrice.toFixed(2))})`).join(', ')
+          : '＋ Add Service Operations';
       },
     });
 
