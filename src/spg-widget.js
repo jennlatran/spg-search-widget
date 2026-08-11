@@ -380,6 +380,31 @@
 }
 .spgw-confirm-btn:hover:not(:disabled){background:#1d4ed8}
 .spgw-confirm-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Wizard ── */
+.spgw-wizard-wrap{flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.spgw-wiz{display:flex;flex-direction:column;height:100%}
+.spgw-wiz-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #f1f5f9;flex-shrink:0}
+.spgw-wiz-back,.spgw-wiz-cancel{background:none;border:none;cursor:pointer;color:#64748b;font-size:12px;padding:2px 4px;border-radius:4px}
+.spgw-wiz-back:hover,.spgw-wiz-cancel:hover{background:#f1f5f9;color:#374151}
+.spgw-wiz-crumbs{flex:1;font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spgw-wiz-body{flex:1;overflow-y:auto;padding:14px}
+.spgw-wiz-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:10px}
+.spgw-wiz-options{display:flex;flex-direction:column;gap:6px}
+.spgw-wiz-opt{text-align:left;padding:10px 12px;border:1px solid #e2e8f0;border-radius:7px;background:#fff;font-size:13px;color:#374151;cursor:pointer;transition:all .12s}
+.spgw-wiz-opt:hover{background:#f0f9ff;border-color:#bfdbfe}
+.spgw-wiz-opt.is-selected{border-color:#2563eb;background:#eff6ff;color:#1d4ed8;font-weight:600}
+.spgw-wiz-loading{display:flex;align-items:center;gap:8px;color:#64748b;font-size:13px;padding:20px 0}
+.spgw-wiz-spinner{width:14px;height:14px;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spgw-spin .6s linear infinite}
+@keyframes spgw-spin{to{transform:rotate(360deg)}}
+.spgw-wiz-error{color:#dc2626;font-size:13px}
+.spgw-wiz-error p{margin-bottom:8px}
+.spgw-wiz-retry{padding:6px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.spgw-wiz-retry:hover{background:#fecaca}
+.spgw-wiz-total{display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-top:12px;border-top:1px solid #f1f5f9;font-size:13px;color:#374151}
+.spgw-wiz-total strong{font-size:16px;color:#059669}
+.spgw-wiz-apply{display:block;width:100%;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+.spgw-wiz-apply:hover{background:#1d4ed8}
 `;
 
   // ─── Widget ───────────────────────────────────────────────────────────────────
@@ -815,6 +840,79 @@
     _updateRightPanel(op) {
       const right = this._root.querySelector('.spgw-modal-right');
       if (right) right.innerHTML = this._rightPanelHTML(op);
+    }
+
+    // ── Wizard rendering ───────────────────────────────────────────────────────
+
+    _wizardShellHTML() {
+      const w = this._s.wizard;
+      const op = getOp(w.opId);
+      if (!op) return '';
+      const crumbs = [op.name, w.application?.name, w.position?.name, w.qualifier?.name].filter(Boolean);
+      return `
+        <div class="spgw-wiz">
+          <div class="spgw-wiz-hdr">
+            <button class="spgw-wiz-back" data-wiz-action="back" ${w.step === 'application' ? 'style="visibility:hidden"' : ''}>‹ Back</button>
+            <div class="spgw-wiz-crumbs">${crumbs.map(esc).join(' › ')}</div>
+            <button class="spgw-wiz-cancel" data-wiz-action="cancel">✕</button>
+          </div>
+          <div class="spgw-wiz-body">
+            ${w.loading ? this._wizardLoadingHTML()
+              : w.error  ? this._wizardErrorHTML(w.error)
+              : this._wizardStepBodyHTML(op, w)}
+          </div>
+        </div>`;
+    }
+
+    _wizardLoadingHTML() {
+      return `<div class="spgw-wiz-loading"><span class="spgw-wiz-spinner"></span>Loading options…</div>`;
+    }
+
+    _wizardErrorHTML(error) {
+      return `
+        <div class="spgw-wiz-error">
+          <p>${esc(error.message)}</p>
+          <button class="spgw-wiz-retry" data-wiz-action="retry">Retry</button>
+        </div>`;
+    }
+
+    _wizardStepBodyHTML(op, w) {
+      if (w.step === 'application') return this._wizardOptionListHTML(w.applications, w.application, 'application', 'Select Application');
+      if (w.step === 'position')    return this._wizardOptionListHTML(w.positions,    w.position,    'position',    'Select Position');
+      if (w.step === 'qualifier')   return this._wizardOptionListHTML(w.qualifiers,   w.qualifier,   'qualifier',   'Select Qualifier');
+      if (w.step === 'labor')       return this._wizardLaborHTML(op, w);
+      return '';
+    }
+
+    _wizardOptionListHTML(options, selected, levelName, title) {
+      return `
+        <div class="spgw-wiz-title">${esc(title)}</div>
+        <div class="spgw-wiz-options">
+          ${options.map(o => `
+            <button class="spgw-wiz-opt ${selected?.id === o.id ? 'is-selected' : ''}" data-wiz-action="select-${levelName}" data-wiz-id="${o.id}">
+              ${esc(o.name)}
+            </button>`).join('')}
+        </div>`;
+    }
+
+    _wizardLaborHTML(op, w) {
+      const p = calcPricing(op, { laborTypeId: w.laborTypeId, laborHours: w.laborHours });
+      return `
+        <div class="spgw-wiz-title">Labor</div>
+        <div class="spgw-cprc">
+          <div class="spgw-cprc-field">
+            <span class="spgw-cprc-lbl">Labor Type</span>
+            <select class="spgw-cprc-sel" data-wiz-field="laborType">
+              ${LABOR_TYPES.map(lt => `<option value="${lt.id}" ${lt.id === p.ltId ? 'selected' : ''}>${esc(lt.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="spgw-cprc-field">
+            <span class="spgw-cprc-lbl">Labor Hours</span>
+            <input class="spgw-cprc-inp" type="number" step="0.1" min="0" value="${p.laborHours}" data-wiz-field="laborHours" />
+          </div>
+        </div>
+        <div class="spgw-wiz-total"><span>Total</span><strong>${fmt$(p.total)}</strong></div>
+        <button class="spgw-wiz-apply" data-wiz-action="apply">Apply</button>`;
     }
 
     // ── Selection ──────────────────────────────────────────────────────────────
